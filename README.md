@@ -8,13 +8,12 @@
 
 ## 效果
 
-<!-- TODO(T0.4/T0.5/T1.6/T2.5): 每阶段填一行真实数字，不要留占位符 -->
+<!-- TODO(T0.5/T1.6/T2.5): 每阶段填一行真实数字，不要留占位符 -->
 
 | pipeline | style_distance ↓ | entity_recall ↑ | numeral_recall ↑ | hallucination_rate ↓ | style_win_rate ↑ |
 |---|---|---|---|---|---|
 | base（Qwen2.5-3B 无微调） | — | — | — | — | — |
-| sutong-v1（3 epochs） | — | — | — | — | — |
-| sutong-v2（2 epochs） | — | — | — | — | — |
+| + LoRA 微调 | — | — | — | — | — |
 | + 风格范例检索 | — | — | — | — | — |
 | + 自检重写环 | — | — | — | — | — |
 

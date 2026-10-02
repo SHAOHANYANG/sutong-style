@@ -10,11 +10,38 @@
 
 ---
 
-## Phase 0 — 评估基线（最优先，不可跳过）
+## Phase 0 — 语料重建与评估基线（最优先，不可跳过）
 
-目标：建立唯一裁判。完成后 `README.md` 的指标对比表必须有 base 与 v1 两行真实数字。
+目标：先把灭失的语料和模型造回来，再建立唯一裁判。完成后 `README.md` 的指标对比表必须有 base 与微调模型两行真实数字。
 
-### T0.1 `[CPU]` 仓库骨架与数据规范化
+> **背景**：2025-08 的全部产物（907 对语料、v1 adapter、两份生成结果）随 AutoDL 实例释放而永久丢失，详见 `docs/SPEC.md` 第 1.1 节。重建成本不高——几十块钱 LLM 调用费加一次 44 分钟训练——但它是一切的前提。
+
+### T0.0 `[CPU]` + `[GPU]` 语料重建
+
+依赖：无（与 T0.1 的骨架搭建可并行，但 T0.2 之后的一切都依赖它）
+
+**这是新增任务，原计划假设语料还在。**
+
+产出：
+- `scripts/chunk_corpus.py`：从自备的六部作品文本切 chunk。目标 907 个、每个 200–400 字、id 格式 `{work}_{idx:04d}`（对齐 SPEC 1.2 的已知参数）
+- `scripts/vernacularize.py`：按 **SPEC 1.5** 实现。断点续跑、并发、失败重试、每 20 条打进度
+- `scripts/split_corpus.py`：**固定 `seed=42`**，按 `work` 分层，eval 约 8%，结果写 `corpus/split.json` 并提交。此后永不变动
+- `corpus/pairs.jsonl`（不提交）、`corpus/split.json`（提交）
+
+**人工前置**：
+1. 重新取得六部作品文本，放 `corpus/raw/`（已 gitignore）
+2. **先写 `human_eval.jsonl` 的前 10 条**。SPEC 1.5 的方案 B 需要它当尺子，没有它就只能走保守的方案 A
+
+**白话化方案 A/B 的选择要人工拍板**，见 SPEC 1.5 结尾。先把问题记进 `docs/QUESTIONS.md`，拿不到答复就走方案 A 并记录。
+
+验收：
+- 907 ± 30 个 chunk，六部作品都有，无空 chunk
+- `vernacularize.py` 中断后重启只处理 remaining（写一条集成测试，用 Fake LLM）
+- 白话版字数落在原文的 0.9–1.3 倍区间，越界的 chunk 被记录在 `corpus/rebuild_report.json`
+- **对 `salvaged_pairs.jsonl` 里 14 条完整样本的同名 chunk 重跑，人工比对新旧两版**，新版的人名/数字/对话不得有缺失
+- `corpus/split.json` 已提交，`corpus/pairs.jsonl` 未被提交
+
+### T0.1 `[CPU]` 仓库骨架
 
 依赖：无
 
@@ -23,19 +50,15 @@
 - `.gitignore`：挡 `corpus/*.jsonl`（白名单见 SPEC 第 7 节）、`__pycache__`、`unsloth_compiled_cache/`、`*.safetensors`、`eval/.judge_cache/`、`.venv`
 - `docs/CHANGELOG.md`、`docs/QUESTIONS.md` 空文件
 - `scripts/prepare_corpus.py`：从自备文本切 chunk 产出 `pairs.jsonl` 骨架（切分逻辑与既有 907 chunk 对齐，chunk id 格式 `{work}_{idx:04d}`）
-- `scripts/normalize_corpus.py`：把既有文件转成 SPEC 1.2 的 schema，并产出 `corpus/split.json`。**必须支持字段名映射配置**（如 `--field-map vernacular=input,original=target`），不要硬编码字段名——原因见 `docs/QUESTIONS.md` 的 Q1
-- `scripts/validate_human_eval.py`：校验 `corpus/human_eval.jsonl`。检查 30 条齐全、每条 100–300 字、**实体 ≥ 2**、**数字 ≥ 1**、6 个 domain 分布均匀。后两项是硬指标，缺了会让保真指标恒为满分（见 Q3）
+- `scripts/validate_human_eval.py`：校验 `corpus/human_eval.jsonl`。检查 30 条齐全、每条 100–300 字、**实体 ≥ 2**、**数字 ≥ 1**、6 个 domain 分布均匀。后两项是硬指标，缺了会让保真指标恒为满分（见 QUESTIONS 的 Q3）
 - `corpus/sample_public.jsonl`：5 条自编样例（**自己写，不要用原著文本**）
-
-**第一件事是核实 schema。** 打开远端的 `pairs.jsonl` / `eval_results.jsonl` / `base_results.jsonl`，确认真实字段名，然后**更新 `docs/SPEC.md` 第 1.1 节**并移除 QUESTIONS.md 的 Q1。拿不到文件就走 Q1 里记录的假设：normalize 脚本带映射层，先用 `sample_public.jsonl` 跑通链路。
 
 `corpus/human_eval.jsonl` 已预填 30 条情境种子，`vernacular` 字段为空、**待人工填写**。不要代写，原因见 `corpus/HUMAN_EVAL_GUIDE.md`。在填好之前，涉及 human_eval 的评估一律跳过并在报告里标 `null`，**不要拿空串当输入跑出一堆 0 分**。
 
 验收：
 - `uv sync && uv run ruff check . && uv run mypy . && uv run pytest` 全绿
-- `uv run python scripts/normalize_corpus.py --help` 正常
 - `uv run python scripts/validate_human_eval.py corpus/human_eval.jsonl` 能正确报出「30 条待填写」
-- `git status` 确认 `corpus/pairs.jsonl` 不在待提交列表里
+- `git status` 确认 `corpus/pairs.jsonl` 与 `corpus/salvaged_pairs.jsonl` 都不在待提交列表里
 
 ---
 
@@ -76,7 +99,7 @@
 
 ---
 
-### T0.4 `[CPU]` 评估编排与基线
+### T0.4 `[CPU]` 评估编排
 
 依赖：T0.3
 
@@ -84,34 +107,38 @@
 - `eval/judge.py`（pairwise + 位置互换 + 磁盘缓存）
 - `eval/run_eval.py`（CLI：`--config`、`--generations`、`--run-id`、`--skip-judge`）
 - `eval/configs/baseline.yaml`
-- 对既有 `base_results.jsonl` 与 `eval_results.jsonl` 各跑一次，产出两份 `eval/reports/*.json`
-- **填好 `README.md` 的指标对比表**
+
+此任务**不产出基线数字**——模型还没训出来。用 `sample_public.jsonl` + Fake generator 把链路跑通即可。
 
 验收：
-- `--skip-judge` 模式下不发任何网络请求（用 `pytest` + 断言无出网）
+- `--skip-judge` 模式下不发任何网络请求（`pytest` 断言无出网）
 - judge 缓存命中时不重复请求（单测断言调用次数）
-- 两份 report 的 `aggregate` 六个字段齐全，`n_cases == 73`
-- README 表格里 base 与 v1 两行都是真实数字，不是占位符
-
-> **这是 Phase 0 的出口。表格填完才能进 Phase 1。**
+- 对 5 条样例能产出格式合法的 report，`aggregate` 六个字段齐全
+- 位置互换逻辑有单测：构造一个永远选 A 的 Fake judge，断言胜率收敛到 0.5 而不是 1.0（这是位置偏差的检测手段）
 
 ---
 
-### T0.5 `[GPU]` 重训 v2（2 epochs）
+### T0.5 `[GPU]` 训练与基线
 
-依赖：T0.4
-
-背景：v1 训了 3 epochs，但 eval_loss 在 epoch 1.9 触底 2.056、之后回升到 2.089，第三个 epoch 是过拟合。
+依赖：T0.0、T0.4
 
 产出：
-- `scripts/train_v2.py`：与 v1 配置一致，**只把 epochs 改成 2**，其余超参（LoRA r=32、lr 2e-4 cosine、batch 2×2）不动
+- `scripts/train.py`：超参照抄 SPEC 1.2 的已知参数（LoRA r=32、lr 2e-4 cosine、batch 2 × grad_accum 2、padding-free、gradient offload），**但 epochs 设为 2**
 - `scripts/generate.py`：批量生成，支持 `--adapter`、`--pipeline`、`--seed`，输出符合 SPEC 1.2 的 `generations/*.jsonl`
-- README 里追加「如何在 GPU 机器上复现」一节
+- README 的「如何在 GPU 机器上复现」一节
+- **填好 README 的指标对比表**
+
+为什么是 2 epochs：旧 v1 训了 3 epochs，但 eval_loss 在 epoch 1.9 触底 2.056、之后回升到 2.089——第三个 epoch 纯属过拟合。不要为了"复刻 v1"去训 3 epochs，没有意义，旧 v1 已经不存在了。
+
+**训练完成后立刻备份**：adapter 传 HF Hub 私有库，`pairs.jsonl` 和 `split.json` 下载到本地。这个项目已经因为没备份全丢过一次。
 
 验收：
-- 脚本能在无 GPU 环境下 `--help` 和 `--dry-run`
+- 脚本在无 GPU 环境下 `--help` 和 `--dry-run` 正常
 - commit message 注明「待人工在 GPU 机器执行」
-- 人工执行后，README 表格追加 `sutong-v2` 一行
+- 人工执行后：eval_loss 曲线记进 CHANGELOG；README 表格的 `base` 与微调两行填上真实数字
+- **adapter 已上传 HF Hub，语料已下载到本地**，CHANGELOG 记录备份位置
+
+> **这是 Phase 0 的出口。表格填完才能进 Phase 1。**
 
 ---
 

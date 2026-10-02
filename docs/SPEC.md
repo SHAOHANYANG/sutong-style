@@ -43,9 +43,11 @@ stylometry/ + eval/metrics.py
 
 ## 1. 既有资产与数据 schema
 
-### 1.1 现状（必须先核实）
+### 1.1 既有产物已全部灭失
 
-既有产物在一台 Linux 机器上，路径 `/home/shaohan_yang/projects/sutong-style/`：
+2025 年 8 月的全部产物存放在一台 AutoDL 租用实例上（`/home/shaohan_yang/projects/sutong-style/`）。该实例已被平台释放，系统盘销毁，**数据不可恢复**。AutoDL 的「文件存储」从未开通，本地无任何副本。
+
+灭失清单：
 
 | 文件 | 内容 | 条数 |
 |---|---|---|
@@ -54,15 +56,50 @@ stylometry/ + eval/metrics.py
 | `corpus/base_results.jsonl` | 基座模型在同一 eval 集上的结果 | 73 |
 | `adapters/qwen2.5-3b-sutong-v1/` | LoRA adapter（r=32） | — |
 
-语料覆盖 6 部作品：`妻妾成群`、`妇女生活`、`另一种妇女生活`、`园艺`、`罂粟之家`、`我的帝王生涯`。chunk id 形如 `我的帝王生涯_0429`。
+**结论：语料与模型都要重建。** 重建流程见 `docs/PLAN.md` 的 T0.0。
 
-训练切分：train 834 / eval 73。基座模型 `Qwen/Qwen2.5-3B-Instruct`，LoRA r=32，可训练参数 29,933,568（占 0.96%）。
+### 1.2 从日志反推出的已知参数（重建的唯一依据）
 
-> **以上字段名是从运行日志反推的，未经核实。** T0.1 的第一件事是打开这些文件确认真实 schema，然后更新本节。
+以下全部来自 2025-08 的运行日志，是重建时必须对齐的事实：
 
-### 1.2 目标 schema（规范化后）
+- **语料范围**：6 部作品 —— `妻妾成群`、`妇女生活`、`另一种妇女生活`、`园艺`、`罂粟之家`、`我的帝王生涯`
+- **chunk 规模**：907 个，id 形如 `我的帝王生涯_0429`（零填充 4 位）
+- **chunk 长度**：约 200–400 字（从日志里的样本目测）
+- **切分**：train 834 / eval 73（约 8%）
+- **基座模型**：`Qwen/Qwen2.5-3B-Instruct`，31.2 亿参数
+- **LoRA**：r=32，可训练参数 29,933,568（占 0.96%）
+- **训练超参**：3 epochs、lr 2e-4 cosine、batch 2 × grad_accum 2、padding-free、gradient offload
+- **训练耗时**：43.8 分钟，显存峰值约 2.84 GB
+- **loss 轨迹**：train 2.726 → 1.936；**eval 2.169 → 2.056（epoch 1.9 触底）→ 2.089 回升**
 
-所有下游代码只认这个 schema。T0.1 要写 `scripts/normalize_corpus.py` 把实际数据转成它。
+最后一条是重建时最有价值的信息：**第 3 个 epoch 是过拟合，重建时直接训 2 epochs**，不要复刻当初的 3 epochs。
+
+### 1.3 残存样本 `corpus/salvaged_pairs.jsonl`
+
+从运行日志里抠回的 30 对 `(白话, 原文)`，六部作品均有覆盖。**它不是训练数据**（量太小），用途是**重建验收**：
+
+```json
+{
+  "id": "妇女生活_0015",
+  "work": "妇女生活",
+  "idx": 15,
+  "vernacular": "娴在楼下看见那些穿白衣服戴白帽子的人……",
+  "original": "（对应的原著段落，受版权保护，此处不写出）",
+  "model_output_v1": "娴在楼下的时候看见那些白衣白帽的人……",
+  "source_log": "scratch_inference_log.txt",
+  "maybe_truncated": false
+}
+```
+
+- 30 条中 14 条完整（`maybe_truncated: false`），其余在日志里被截断
+- 6 条附带 `model_output_v1`，即当初 v1 模型的实际输出
+- 含原著文本，**不提交**（已在 `.gitignore` 覆盖范围内）
+
+用法见 T0.0 的验收标准。
+
+### 1.4 目标 schema
+
+所有下游代码只认这个 schema，由 T0.0 的重建流程直接产出。
 
 `corpus/pairs.jsonl` — 每行：
 
@@ -77,7 +114,7 @@ stylometry/ + eval/metrics.py
 }
 ```
 
-`split` 取值 `train` 或 `eval`，**必须与 v1 训练时的切分一致**，否则后续所有对比失效。如果原始文件没有这个字段，从 `eval_results.jsonl` 的 id 列表反推 eval 集，并把切分固化到 `corpus/split.json`。
+`split` 取值 `train` 或 `eval`。旧切分已随数据灭失，**重新切分并用固定 seed**（`seed=42`，比例 eval ≈ 8%，按 `work` 分层以免某部作品全落进 eval），切分结果固化到 `corpus/split.json` 并提交。此后永不变动——所有横向对比都依赖它稳定。
 
 `corpus/generations/<run_id>.jsonl` — 每行：
 
@@ -93,6 +130,48 @@ stylometry/ + eval/metrics.py
 ```
 
 `pipeline` 取值 `baseline` / `retrieval` / `agent`。取 `agent` 时 `trace` 必填，结构见 4.4。
+
+### 1.5 语料重建：`scripts/vernacularize.py` 规格
+
+这是整个重建的质量瓶颈——训练数据的上限就在这一步。
+
+**做什么**：输入苏童原文 chunk，用 LLM 产出对应的白话版。注意方向是**倒着造数据**：原文是训练**目标**，白话是训练**输入**。
+
+**必须保留**：
+
+- 全部人名、地名、职官称谓（颂莲、陈佐千、枫杨树、燮国、太医……）
+- 全部数字（含年份、数量、日期）
+- 全部情节与对话内容
+- 段落结构（原文分几段，白话也分几段）
+
+**必须改变**：
+
+- 书面语 → 口语（「心如死水」→「心里凉透了，啥盼头都没有」）
+- 长句 → 短句，拆开定语
+- 成语、文言残留 → 大白话
+- 不加引号的对话 → 常规对话写法（苏童的无引号对话是**目标侧**特征，不该出现在输入侧）
+
+**禁止**：概括、缩写、增补原文没有的情节。白话版字数应在原文的 **0.9–1.3 倍**，超出范围的 chunk 要重试并记录。
+
+**工程要求**（照搬当初 pipeline 已验证的做法）：
+
+- **断点续跑**：启动时扫描已有输出，只处理 remaining。原日志的 `Total chunks: 907, already done: 0, remaining: 907` 就是这个机制
+- **并发** + 失败重试，每 20 条打一次进度 `progress: N/907 (ok=, failed=)`
+- 模型与当初保持同级（走 `JUDGE_BASE_URL` 那套环境变量，可用 `deepseek-chat`）
+- 单条失败不中断全局，最后汇总 failed 列表
+
+**一个重要的决策点（需要人工拍板，先记进 `docs/QUESTIONS.md`）**：
+
+模型的已知缺陷 #2（域外输入失效）的**根因就在这一步**——LLM 生成的白话仍带着原文的句子骨架和叙事密度，和人类随手写的白话分布不同。旧语料已经灭失，**所以重建时没有"保持兼容"的包袱，可以直接修这个根因**：
+
+- 方案 A（保守）：复刻当初的效果，参照 `salvaged_pairs.jsonl` 的白话风格
+- 方案 B（治根）：prompt 里额外要求打散句子边界、加入口语赘余和语气词，让产出的白话更接近真人写法
+
+方案 B 更可能解决缺陷 #2，但需要一把尺子来验证"更接近真人"。那把尺子就是 `corpus/human_eval.jsonl`：用 `stylometry` 算**生成白话**与**人工白话**之间的 `style_distance`，越小说明越接近真实输入分布。
+
+> 这意味着 **`human_eval.jsonl` 至少要先写 10 条**，才能调这个 prompt。原计划把它排在 Phase 1 末尾，现在要提前。见 PLAN 的 T0.0。
+
+**验收**：对 `salvaged_pairs.jsonl` 里 14 条完整样本的同名 chunk 重跑白话化，人工比对新旧两版。新版在「信息保全」上不得劣于旧版（人名、数字、对话一个不少）。
 
 ---
 
