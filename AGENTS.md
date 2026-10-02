@@ -31,6 +31,8 @@ uv run pytest -m "not gpu"   # 只跑不需要 GPU 的测试（CI 用这个）
 
 ## GPU 约束（重要）
 
+**执行环境**：仓库所有者有一张 **RTX 5060 Laptop（8GB，Blackwell sm_120）**，`[GPU]` 任务由人工在 **WSL2 Ubuntu** 下执行，不是 Windows 原生。你写的运行脚本按 Linux 写，路径不要假设 Windows 盘符；需要装依赖时注意 Blackwell 要 torch ≥ 2.7 + CUDA 12.8。8GB 显存下 vLLM 的参数见 SPEC 第 5 节，不要改大。
+
 **你很可能没有 GPU，也没有远端训练机的访问权限。** 任务在 `docs/PLAN.md` 里标了三种：
 
 - `[CPU]` — 你能完整做完，必须做完
