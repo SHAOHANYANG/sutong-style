@@ -28,14 +28,17 @@
 - `scripts/split_corpus.py`：**固定 `seed=42`**，按 `work` 分层，eval 约 8%，结果写 `corpus/split.json` 并提交。此后永不变动
 - `corpus/pairs.jsonl`（不提交）、`corpus/split.json`（提交）
 
-**人工前置**：
-1. 重新取得六部作品文本，放 `corpus/raw/`（已 gitignore）
-2. **先写 `human_eval.jsonl` 的前 10 条**。SPEC 1.5 的方案 B 需要它当尺子，没有它就只能走保守的方案 A
+**前置条件均已就绪，此任务可立即开工**：
+- ✅ 六部作品文本已从回收站恢复，在 `corpus/raw/`（已 gitignore）。文件清单与合集分篇规则见 **SPEC 1.6**
+- ✅ 白话化方案已拍板：**方案 A**（复刻当初风格，参照 `salvaged_pairs.jsonl`）
+- ✅ `human_eval.jsonl` 不再是前置，Phase 1 之前交付即可
 
-**白话化方案 A/B 的选择要人工拍板**，见 SPEC 1.5 结尾。先把问题记进 `docs/QUESTIONS.md`，拿不到答复就走方案 A 并记录。
+切分脚本有四个已知陷阱，**全在 SPEC 1.6，动手前必读**：合集分篇要按「标题独占一行」、`另一种妇女生活` 必须先于 `妇女生活` 匹配、`园艺` 在正文里也是普通词、`※※※` 是天然 chunk 边界。另需做繁体残留清洗（`麽`→`么`），但**不要规范化引号**。
 
 验收：
 - 907 ± 30 个 chunk，六部作品都有，无空 chunk
+- 分篇正确性有单测：四部中篇的首尾各取一句，断言落在正确的 `work` 下
+- 繁体清洗有单测，且断言引号**未**被改动
 - `vernacularize.py` 中断后重启只处理 remaining（写一条集成测试，用 Fake LLM）
 - 白话版字数落在原文的 0.9–1.3 倍区间，越界的 chunk 被记录在 `corpus/rebuild_report.json`
 - **对 `salvaged_pairs.jsonl` 里 14 条完整样本的同名 chunk 重跑，人工比对新旧两版**，新版的人名/数字/对话不得有缺失
