@@ -6,7 +6,7 @@ corpus/raw/
 corpus/generations/
 corpus/*.jsonl
 corpus/*.txt
-corpus/rebuild_report.json
+corpus/rebuild_report*.json
 
 # 白名单：不可还原原文的衍生物，必须提交
 !corpus/sample_public.jsonl

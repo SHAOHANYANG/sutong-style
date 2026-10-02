@@ -1,9 +1,14 @@
-"""Create a copyright-restricted pairs skeleton from user-supplied text files."""
+"""Create a copyright-restricted chunk skeleton from user-supplied text files.
+
+For the restored six-work corpus, ``scripts/chunk_corpus.py`` is the canonical
+entry point because it understands the four-work anthology and section markers.
+"""
 
 from __future__ import annotations
 
 import argparse
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 import structlog
@@ -56,7 +61,7 @@ def prepare_file(path: Path) -> list[PairSkeleton]:
     ]
 
 
-def write_jsonl(rows: list[PairSkeleton], output: Path) -> None:
+def write_jsonl(rows: Iterable[BaseModel], output: Path) -> None:
     """Write pair skeletons as UTF-8 JSON Lines."""
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8", newline="\n") as handle:
