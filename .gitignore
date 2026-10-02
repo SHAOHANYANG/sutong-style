@@ -1,0 +1,69 @@
+# ============================================================
+# 语料：苏童作品受版权保护，一律不得提交
+# 详见 docs/SPEC.md 第 7 节
+# ============================================================
+corpus/raw/
+corpus/generations/
+corpus/*.jsonl
+corpus/*.txt
+
+# 白名单：不可还原原文的衍生物，必须提交
+!corpus/sample_public.jsonl
+!corpus/human_eval.jsonl
+!corpus/split.json
+!corpus/gazetteer.json
+
+# ============================================================
+# 模型权重走 Hugging Face Hub，不进 git
+# ============================================================
+adapters/
+outputs*/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+unsloth_compiled_cache/
+
+# ============================================================
+# 缓存与中间产物
+# ============================================================
+eval/.judge_cache/
+retrieval/data/embeddings.npy
+retrieval/data/bm25_index.pkl
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# 前端
+web/node_modules/
+web/dist/
+web/.vite/
+
+# 环境与密钥
+.env
+.env.local
+*.pem
+*.key
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 日志
+*.log
+logs/
