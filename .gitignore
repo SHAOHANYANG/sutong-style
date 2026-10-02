@@ -6,6 +6,7 @@ corpus/raw/
 corpus/generations/
 corpus/*.jsonl
 corpus/*.txt
+corpus/rebuild_report.json
 
 # 白名单：不可还原原文的衍生物，必须提交
 !corpus/sample_public.jsonl
@@ -35,6 +36,7 @@ retrieval/data/bm25_index.pkl
 __pycache__/
 *.py[cod]
 .venv/
+.uv-cache/
 venv/
 .mypy_cache/
 .ruff_cache/

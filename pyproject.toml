@@ -1,0 +1,57 @@
+[project]
+name = "sutong-style"
+version = "0.1.0"
+description = "把现代白话中文改写成苏童文风的评估与生成流水线"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+
+[dependency-groups]
+core = [
+    "jieba>=0.42.1",
+    "numpy>=2.1",
+    "openai>=1.51",
+    "pydantic>=2.9",
+    "python-dotenv>=1.0",
+    "structlog>=24.4",
+]
+gpu = [
+    "torch>=2.7",
+    "transformers>=4.45",
+    "vllm>=0.9; sys_platform == 'linux'",
+]
+dev = [
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+default-groups = ["core", "dev"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = ["RUF001"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["scripts", "tests"]
+exclude = ["corpus", ".venv"]
+
+[[tool.mypy.overrides]]
+module = ["jieba", "jieba.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["gpu: requires a CUDA-capable GPU"]
