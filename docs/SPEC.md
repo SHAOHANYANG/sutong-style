@@ -157,7 +157,7 @@ stylometry/ + eval/metrics.py
 
 - **断点续跑**：启动时扫描已有输出，只处理 remaining。原日志的 `Total chunks: 907, already done: 0, remaining: 907` 就是这个机制
 - **并发** + 失败重试，每 20 条打一次进度 `progress: N/907 (ok=, failed=)`
-- 模型与当初保持同级（走 `JUDGE_BASE_URL` 那套环境变量，可用 `deepseek-chat`）
+- 模型与当初保持同级。凭据走 `LLM_BASE_URL` / `LLM_API_KEY`，模型名走 `VERNACULARIZE_MODEL`（默认 `deepseek-chat`），OpenAI 兼容接口
 - 单条失败不中断全局，最后汇总 failed 列表
 
 **一个重要的决策点（需要人工拍板，先记进 `docs/QUESTIONS.md`）**：
@@ -339,7 +339,8 @@ hallucination_rate = |E_out \ E_in| / |E_out|       # E_out 为空时记 0.0
 - 输入 `(ground_truth_original, candidate_A, candidate_B)`，问哪个更像苏童
 - 每个 case 跑**两次，A/B 位置互换**。两次结论一致才计胜或负；不一致记平局
 - `style_win_rate = (胜 + 0.5 × 平) / 总数`
-- judge 模型从环境变量读：`JUDGE_MODEL`、`JUDGE_BASE_URL`、`JUDGE_API_KEY`，走 OpenAI 兼容接口，默认 `deepseek-chat`
+- 凭据与白话化共用 `LLM_BASE_URL` / `LLM_API_KEY`，模型名单独走 `JUDGE_MODEL`（默认 `deepseek-chat`）。两处模型可不同——judge 可以用更强的模型，白话化用更便宜的
+- **凭据只从环境变量或 `.env` 读，禁止硬编码。** `.env` 已在 `.gitignore` 中。任何 `.py` 文件里都不得出现 `sk-` 开头的字符串，T0.1 要加一条测试扫描全仓库断言这一点
 - judge 调用**必须带磁盘缓存**，key = `sha256(prompt + model)`，目录 `eval/.judge_cache/`（加入 `.gitignore`）。重跑评估不应该重复付费
 
 ### 3.4 报告格式
