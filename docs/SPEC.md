@@ -177,7 +177,10 @@ stylometry/ + eval/metrics.py
 
 ### 1.6 原始文本（已恢复，`corpus/raw/`）
 
-2026-10-02 从 Windows 回收站恢复，三个文件覆盖全部六部作品，均已转为 UTF-8：
+2026-10-02 从 Windows 回收站恢复，三个文件覆盖全部六部作品，均已转为 UTF-8。
+
+> **固定备份位置：`D:\Transformers\corpus-backup\`**（仓库之外，含 `SHA256SUMS` 与 `MANIFEST.md`）。
+> `corpus/raw/` 是工作副本，可随时从备份恢复。校验：`sha256sum -c SHA256SUMS`。
 
 | 文件 | 中文字数 | 包含作品 |
 |---|---|---|
