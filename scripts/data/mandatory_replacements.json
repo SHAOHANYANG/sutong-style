@@ -1,0 +1,746 @@
+{
+  "extraction_version": "raw-jieba-v1",
+  "jieba_version": "0.42.1",
+  "minimum_count": 2,
+  "per_category_limit": 60,
+  "source_sha256": {
+    "corpus\\raw\\妻妾成群.txt": "4655a556ffa95a877f9374a93801034093f4aef101277d7632c6183813e4b435",
+    "corpus\\raw\\我的帝王生涯.txt": "e62fabe4e691fbd5dcd09809d3ba47ff6d25aa89ce9811a344ccfc595995b0c0",
+    "corpus\\raw\\罂粟之家.txt": "61e9d0f582b71ea019c1192e1fc8d303d98f838934cec90ce7a5f1eee9616061"
+  },
+  "terms": [
+    {
+      "term": "似乎",
+      "count": 69,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "竟然",
+      "count": 33,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "脸色苍白",
+      "count": 15,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "一口气",
+      "count": 14,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "偷偷地",
+      "count": 13,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "一动不动",
+      "count": 12,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "惶惑",
+      "count": 12,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "奇怪的是",
+      "count": 11,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "莫名其妙",
+      "count": 11,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "仿佛",
+      "count": 9,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "憔悴",
+      "count": 9,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "自言自语",
+      "count": 9,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "至高无上",
+      "count": 9,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "闪烁着",
+      "count": 9,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "一片空白",
+      "count": 8,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "不可思议",
+      "count": 8,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "千万别",
+      "count": 8,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "无可奈何",
+      "count": 8,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "望了望",
+      "count": 8,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "深深地",
+      "count": 8,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "阴郁",
+      "count": 8,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "回忆起",
+      "count": 7,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "天知道",
+      "count": 7,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "如出一辙",
+      "count": 7,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "小心翼翼",
+      "count": 7,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "戛然而止",
+      "count": 7,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "沉默不语",
+      "count": 7,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "目瞪口呆",
+      "count": 7,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "突如其来",
+      "count": 7,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "血肉模糊",
+      "count": 7,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "闭上眼睛",
+      "count": 7,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "一如既往",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "不合时宜",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "从早到晚",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "半信半疑",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "咬牙切齿",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "无论如何",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "木栩子",
+      "count": 6,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "深不可测",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "犹如",
+      "count": 6,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "蓬头垢面",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "面面相觑",
+      "count": 6,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "一切都是",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "与生俱来",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "坐立不安",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "大惊失色",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "好久没",
+      "count": 5,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "幸灾乐祸",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "此起彼伏",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "水落石出",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "漫无目的",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "若有若无",
+      "count": 5,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "一巴掌",
+      "count": 4,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "一闪而过",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "不在乎",
+      "count": 4,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "不复存在",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "不置一词",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "与众不同",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "举手投足",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "充耳不闻",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "千真万确",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "如泣如诉",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "容不下",
+      "count": 4,
+      "categories": [
+        "idiom"
+      ]
+    },
+    {
+      "term": "心不在焉",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "怅然",
+      "count": 4,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "恻隐之心",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "惊慌失措",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "披头散发",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "拂袖而去",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "无动于衷",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "无言以对",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "泣不成声",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "泪流满面",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "浩浩荡荡",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "猝不及防",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "睡眼惺忪",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "老泪纵横",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "耿耿于怀",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "脱口而出",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "若无其事",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "莞尔一笑",
+      "count": 4,
+      "categories": [
+        "four_character_expression",
+        "idiom"
+      ]
+    },
+    {
+      "term": "颓然",
+      "count": 4,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "颤栗",
+      "count": 4,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "凝视",
+      "count": 3,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "寂寥",
+      "count": 3,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "殆尽",
+      "count": 3,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "绯红",
+      "count": 3,
+      "categories": [
+        "color_texture"
+      ]
+    },
+    {
+      "term": "苍茫",
+      "count": 3,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "褐色",
+      "count": 3,
+      "categories": [
+        "color_texture"
+      ]
+    },
+    {
+      "term": "凄凉",
+      "count": 2,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "悻悻",
+      "count": 2,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "愕然",
+      "count": 2,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "斑驳",
+      "count": 2,
+      "categories": [
+        "color_texture"
+      ]
+    },
+    {
+      "term": "觊觎",
+      "count": 2,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "踯躅",
+      "count": 2,
+      "categories": [
+        "literary_word"
+      ]
+    },
+    {
+      "term": "黄褐色",
+      "count": 2,
+      "categories": [
+        "color_texture"
+      ]
+    }
+  ],
+  "limitation": "Heuristic short-word candidates, not exhaustive stylistic annotation."
+}

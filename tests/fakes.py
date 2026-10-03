@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 
 from openai.types.chat import ChatCompletion
@@ -77,3 +78,28 @@ class FakeOpenAI:
 
     def __init__(self, model: str, requests: list[FakeProviderCall]) -> None:
         self.chat = FakeChat(model, requests)
+
+
+class FakeTwoPassCall(BaseModel):
+    stage: int
+    seed: int
+    temperature: float
+    top_p: float
+    max_tokens: int
+    thinking_mode: str
+
+
+class FakeTwoPassGenerator:
+    def __init__(self, *, invalid_json: bool = False) -> None:
+        self.calls: list[FakeTwoPassCall] = []
+        self.invalid_json = invalid_json
+
+    def generate(self, prompt: str, **kwargs: object) -> str:
+        stage = 2 if prompt.startswith("这是第二遍") else 1
+        self.calls.append(FakeTwoPassCall.model_validate({"stage": stage, **kwargs}))
+        text = "甲乙在河边聊了很久今天要去镇上看看新房子" * 12
+        if stage == 1:
+            return text
+        if self.invalid_json:
+            return "非JSON，禁止重试"
+        return json.dumps({"issues": [], "repaired_text": text}, ensure_ascii=False)

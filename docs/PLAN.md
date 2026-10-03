@@ -40,7 +40,7 @@
 - 分篇正确性有单测：四部中篇的首尾各取一句，断言落在正确的 `work` 下
 - 繁体清洗有单测，且断言引号**未**被改动
 - `vernacularize.py` 中断后重启只处理 remaining（写一条集成测试，用 Fake LLM）
-- 白话版字数落在原文的 0.9–1.3 倍区间，越界的 chunk 被记录在 `corpus/rebuild_report.json`
+- 当前白话版字数兜底范围及两段式/PINC 闸门按 SPEC 1.5.1；旧规则仅解释历史报告，异常逐条记录
 - **对 `salvaged_pairs.jsonl` 剔除 `妇女生活_0015` 后的 13 条执行严格留一法重跑**，人工比对新旧两版，新版的人名/数字/对话不得有缺失；预览分层随机抽 20 条，均值区间与停止条件按 SPEC 1.5
 - `corpus/split.json` 已提交，`corpus/pairs.jsonl` 未被提交
 
@@ -71,6 +71,11 @@
 
 产出：`stylometry/features.py`、`lexicon.py`、`distance.py`，按 SPEC 第 2 节实现。附 `scripts/build_lexicon.py` 与 `scripts/fit_style_reference.py`。
 
+后续补充（本轮只登记）：另训“苏童 / 其他同期作家 / 白话”风格分类器，以置信度和
+style accuracy 与20维距离互证。按作者/作品隔离训练测试，固定seed，记录类别/年代/来源
+和域外误差；先预注册划分与验收再训练，不能以训练集准确率作为结果。真实模型依赖注入、
+CPU测试用Fake；资源不足的训练另交人工脚本，不在T0.0实现。
+
 验收：
 - `extract()` 对 20 维向量的每一维都有单测，用手写的小段文本断言期望值
 - **第 18 维必须有专门单测**：`"第四天"` → 1.0，`"第４天"` → 0.0，`"第4天"` → 0.0
@@ -85,6 +90,11 @@
 依赖：T0.2
 
 产出：`eval/fidelity.py`、`eval/metrics.py`，按 SPEC 3.2 实现。附 `scripts/build_gazetteer.py`。
+
+后续补充（本轮只登记）：加入 BERTScore 语义保真辅助指标，规则抓不到语义级扭曲。
+记录中文适用模型/版本、层数、分词与baseline rescaling，固定参数，以独立人工标注验证。
+通过依赖注入和缓存复用，不在纯指标函数中做I/O；可进agent环，但须实测延迟/资源预算，
+不得未经测量声称一定比LLM judge快便宜，不替代实体/数字硬约束。无GPU测试用Fake。
 
 验收 —— **以下实测 bug 必须被抓到，逐条写成单测**：
 
@@ -204,6 +214,18 @@
 产出：README 表格追加 `retrieval` 行；CHANGELOG 记录最优 k 与指标变化。
 
 验收：k 扫描结果以表格形式进 CHANGELOG；检索召回**只用 `human_eval.jsonl` 评**（SPEC 4.3 的陷阱，不要用训练对自测）。
+
+---
+
+### T1.7 `[GPU]` 外部 baseline 对比（Phase 1 完成后执行）
+
+依赖：T1.6、T0.3。本轮只登记，不下载权重、不实现或运行。
+
+以 [StyleLLM](https://github.com/stylellm/stylellm_models) 的四大名著/Yi-6B模型作外部对照，
+同一冻结输入、seed方案与指标跑一遍。其公开README提供定性演示，未给可直接引用的量化
+评估数字，必须自行跑出结果；记录权重版本、许可证、采样参数与硬件。域不同，不能把
+“不是苏童”混同模型失败；同时说明同风格不可直接匹配的公平性局限。
+交付独立GPU脚本和README说明；量化表、分布和负结果进报告/CHANGELOG，实测前全部null。
 
 ---
 
