@@ -30,6 +30,7 @@ from scripts.rebuild_reporting import (
     Distribution,
     DistributionReport,
     Exclusion,
+    ModelIdentityMismatchError,
     ProviderMetadata,
     RunMetadata,
     SamplingParameters,
@@ -110,6 +111,7 @@ class AttemptIssue(BaseModel):
 
 class RebuildReport(BaseModel):
     status: str = "complete"
+    interpretation_notes: list[str] = Field(default_factory=list)
     total_requested: int
     already_done: int
     succeeded: int
@@ -323,6 +325,7 @@ def generate_pair(
                     temperature=parameters.temperature,
                     top_p=parameters.top_p,
                     max_tokens=parameters.max_tokens,
+                    thinking_mode=parameters.thinking_mode,
                 )
             )
             if provider_metadata:
@@ -394,6 +397,13 @@ def generate_pair(
                 + f"相似度上限 {limit:.2f}。必须保留数字短语："
                 + "、".join(numeric_phrases(chunk.original))
             )
+        except ModelIdentityMismatchError:
+            if provider_metadata:
+                record.provider = provider_metadata()
+            record.reasons.append("model_identity_mismatch")
+            if records is not None:
+                records.append(record)
+            raise
         except Exception as exc:
             # Do not include provider exception messages; they may contain credentials or text.
             record.reasons.append(type(exc).__name__)
@@ -526,6 +536,7 @@ def run_batch(
     issues: list[AttemptIssue] = []
     all_records: list[AttemptRecord] = []
     last_records: list[AttemptRecord] = []
+    aborted = threading.Event()
     reference_by_id = {example.id: example for example in references or []}
     if references:
         for chunk in chunks:
@@ -557,19 +568,47 @@ def run_batch(
 
     def process(chunk: CorpusChunk) -> tuple[Pair | None, list[AttemptIssue], list[AttemptRecord]]:
         records: list[AttemptRecord] = []
-        pair, pair_issues = generate_pair(
-            chunk,
-            split_by_id,
-            generator,
-            retries=retries,
-            seed=seed,
-            examples=examples,
-            records=records,
-            sampling=metadata.sampling if metadata else None,
-            reference=reference_by_id.get(chunk.id),
-            round_number=metadata.round if metadata else 1,
-            provider_metadata=provider_metadata,
-        )
+        if aborted.is_set():
+            return (
+                None,
+                [AttemptIssue(id=chunk.id, attempt=0, reason="cancelled_after_model_mismatch")],
+                records,
+            )
+        try:
+            pair, pair_issues = generate_pair(
+                chunk,
+                split_by_id,
+                generator,
+                retries=retries,
+                seed=seed,
+                examples=examples,
+                records=records,
+                sampling=metadata.sampling if metadata else None,
+                reference=reference_by_id.get(chunk.id),
+                round_number=metadata.round if metadata else 1,
+                provider_metadata=provider_metadata,
+            )
+        except ModelIdentityMismatchError:
+            aborted.set()
+            LOGGER.error("model_identity_mismatch", id=chunk.id)
+            return (
+                None,
+                [
+                    AttemptIssue(
+                        id=chunk.id,
+                        attempt=record.attempt,
+                        reason=reason,
+                        length_ratio=record.length_ratio,
+                        similarity=record.similarity,
+                        similarity_limit=record.similarity_limit,
+                        dialogue_density=record.dialogue_density,
+                        proper_noun_density=record.proper_noun_density,
+                    )
+                    for record in records
+                    for reason in record.reasons
+                ],
+                records,
+            )
         return pair, pair_issues, records
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
@@ -581,20 +620,31 @@ def run_batch(
             pair, pair_issues, records = future.result()
             issues.extend(pair_issues)
             all_records.extend(records)
-            last_records.append(records[-1])
-            append_artifacts(artifacts_path, records)
-            if pair is None:
+            if records:
+                last_records.append(records[-1])
+            if pair is None or aborted.is_set():
                 failed.append(chunk.id)
+                if pair is not None:
+                    records[-1].accepted = False
+                    records[-1].reasons.append("discarded_after_model_mismatch")
+                    issues.append(
+                        AttemptIssue(
+                            id=chunk.id,
+                            attempt=records[-1].attempt,
+                            reason="discarded_after_model_mismatch",
+                        )
+                    )
             else:
                 with OUTPUT_LOCK, output.open("a", encoding="utf-8", newline="\n") as handle:
                     handle.write(pair.model_dump_json() + "\n")
                 succeeded += 1
+            append_artifacts(artifacts_path, records)
             LOGGER.info(
                 "vernacularize_case",
                 id=chunk.id,
-                similarity=records[-1].similarity,
-                old_vs_new=records[-1].old_vs_new_similarity,
-                reasons=records[-1].reasons,
+                similarity=records[-1].similarity if records else None,
+                old_vs_new=records[-1].old_vs_new_similarity if records else None,
+                reasons=records[-1].reasons if records else [issue.reason for issue in pair_issues],
             )
             if processed % 20 == 0 or processed == len(remaining):
                 LOGGER.info(
@@ -613,6 +663,7 @@ def run_batch(
         )
     last_records.sort(key=lambda record: record.id)
     report = RebuildReport(
+        status="aborted_model_mismatch" if aborted.is_set() else "complete",
         total_requested=len(chunks),
         already_done=len(completed),
         succeeded=succeeded,
@@ -658,6 +709,12 @@ def run_metadata(
     ).stdout.strip()
     prompt_files = sorted(PROMPT_DIR.glob("*.txt"))
     paths = [str(path.relative_to(Path.cwd())) for path in prompt_files]
+    prompt_commit = subprocess.run(
+        ["git", "log", "-1", "--format=%H", "--", *paths],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
     dirty = subprocess.run(
         [
             "git",
@@ -701,15 +758,17 @@ def run_metadata(
     if args.style_reference:
         sources.append(args.style_reference)
     return RunMetadata(
-        model=os.environ.get("VERNACULARIZE_MODEL", "deepseek-chat"),
+        model=os.environ.get("VERNACULARIZE_MODEL", "deepseek-v4-pro"),
         endpoint_host=urlsplit(os.environ.get("LLM_BASE_URL", "")).hostname,
         sampling=SamplingParameters(
             temperature=args.temperature,
             top_p=args.top_p,
             max_tokens=args.max_tokens,
             seed=args.seed,
+            thinking_mode=args.thinking_mode,
         ),
-        prompt_git_commit=commit,
+        prompt_git_commit=prompt_commit,
+        code_git_commit=commit,
         prompt_path="scripts/prompts/vernacularize_a.txt",
         prompt_sha256=hashlib.sha256(
             b"".join(path.read_bytes() for path in prompt_files)
@@ -752,6 +811,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--top-p", type=float, default=1.0)
     parser.add_argument("--max-tokens", type=int, default=2048)
+    parser.add_argument("--thinking-mode", choices=["enabled", "disabled"], default="disabled")
     parser.add_argument("--allow-full", action="store_true", help="仅在人工明确放行全量之后使用")
     return parser.parse_args()
 
@@ -802,7 +862,7 @@ def main() -> int:
     generator = OpenAICompatibleGenerator(
         api_key=api_key,
         base_url=os.environ.get("LLM_BASE_URL"),
-        model=os.environ.get("VERNACULARIZE_MODEL", "deepseek-chat"),
+        model=os.environ.get("VERNACULARIZE_MODEL", "deepseek-v4-pro"),
     )
     report = run_batch(
         chunks,

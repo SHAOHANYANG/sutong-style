@@ -15,6 +15,16 @@ class SamplingParameters(BaseModel):
     top_p: float = 1.0
     max_tokens: int = 2048
     seed: int = 42
+    thinking_mode: str | None = None
+
+
+class ModelIdentityMismatchError(RuntimeError):
+    """Fatal provider routing error; never retry it as a bad generation."""
+
+    def __init__(self, requested: str, returned: str) -> None:
+        self.requested = requested
+        self.returned = returned
+        super().__init__(f"Requested model {requested!r}, received {returned!r}")
 
 
 class ProviderMetadata(BaseModel):
@@ -38,6 +48,10 @@ class RunMetadata(BaseModel):
     completed_at_utc: str | None = None
     sampling: SamplingParameters
     prompt_git_commit: str
+    code_git_commit: str | None = None
+    control_baseline: str | None = None
+    control_baseline_sha256: str | None = None
+    control_verification: str | None = None
     prompt_path: str
     prompt_sha256: str
     mode: str

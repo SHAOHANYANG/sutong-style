@@ -61,6 +61,19 @@ docker compose up -d
 
 语料因版权不包含在本仓库，见下方「数据与版权」。
 
+T0.0 模型单变量对照（需自备本地 round2 报告及完整档案，先配置 `.env`）：
+
+```bash
+uv run python -m scripts.model_control \
+  --baseline corpus/rebuild_report_round2_20261003.json \
+  --output corpus/preview_pairs_model_control_20261003.jsonl \
+  --report corpus/rebuild_report_model_control_20261003.json
+```
+
+仅重放原 20 条一次，拒绝改动 prompt / seed / 范例或复用输出路径。结束后等待人工 review，
+不自动运行消融或全量。`deepseek-chat` 旧别名不能用于 Pro；现有 `.env` 中旧设置不会被静默修改，
+对照入口明确请求 `deepseek-v4-pro`，常规入口需将 `VERNACULARIZE_MODEL` 配为同一标识。
+
 ## 性能
 
 <!-- TODO(T3.7): locust 压测后填入 -->
@@ -94,6 +107,7 @@ docker compose up -d
 - 白话化参照仅 13 条，占历史 907 条的 1.4%，来自 2025-08 人工 review 日志，无法确认是随机抽样还是择优展示。这是当前最大的方法论软肋。剔除原文侧疑似截断的 `妇女生活_0015`（长度比约 1.95）并做严格留一法，仍不能消除日志选择偏差
 - SequenceMatcher 相似度只是表层重合的代理指标，不直接等价于白话化质量或信息保真。预览均值必须双向落在 [0.51, 0.61]；低于下界也要停下来检查信息流失，不能当作改进。分层预览每部作品 3–4 条，均值不代表按全语料作品占比加权的均值
 - 托管 API 若只公开模型别名，日期、采样参数和响应标识仍不足以锁定不可变底座快照；报告明确保留这一缺失。jieba 专名与对白密度也是启发式估计，需要人工核对
+- 2025-08 白话生成模型未知；2026-10-03 的留一法、round1、round2 均**在 deepseek-flash 上得到**（请求 deepseek-chat 被别名重映射），不能当作 deepseek-chat 的结果。跨模型参照的不确定性比此前更大，不能单凭表层分数推断 prompt 或模型的因果作用
 - 语义级漂移抓不到。规则化校验能抓实体、数字、称谓的替换，但抓不到「垂死的酸气」被写成「死尸散发的酸臭之气」这类语义扭曲（人还活着）
 - `human_eval.jsonl` 的 30 条人工白话没有 ground truth，只能评风格距离与幻觉率，不能算 recall
 - 域外泛化只缓解未解决。根因在训练数据分布，彻底解决需要补一批人类撰写的白话输入重训

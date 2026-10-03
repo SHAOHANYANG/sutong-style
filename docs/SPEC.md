@@ -157,8 +157,8 @@ stylometry/ + eval/metrics.py
 
 - **断点续跑**：启动时扫描已有输出，只处理 remaining。原日志的 `Total chunks: 907, already done: 0, remaining: 907` 就是这个机制
 - **并发** + 失败重试，每 20 条打一次进度 `progress: N/907 (ok=, failed=)`
-- 模型与当初保持同级。凭据走 `LLM_BASE_URL` / `LLM_API_KEY`，模型名走 `VERNACULARIZE_MODEL`（默认 `deepseek-chat`），OpenAI 兼容接口
-- 单条失败不中断全局，最后汇总 failed 列表
+- 凭据走 `LLM_BASE_URL` / `LLM_API_KEY`，模型名走 `VERNACULARIZE_MODEL`（默认 `deepseek-v4-pro`），OpenAI 兼容接口。2025-08 的生成模型未知，不能声称已保持同级；不得使用已重映射到 Flash 的 `deepseek-chat` 代称 Pro
+- 普通单条失败不中断全局，最后汇总 failed 列表；**模型身份不一致是致命错误，必须中止整批**
 
 **一个重要的决策点（需要人工拍板，先记进 `docs/QUESTIONS.md`）**：
 
@@ -191,10 +191,12 @@ stylometry/ + eval/metrics.py
 2. 从当前 chunks 按 `work` 分层、`seed=42` 随机重抽 20 条，排除旧范例 id、原文完全一致项和异常参照 id。采用近似等额分层，六部作品各 3 或 4 条；抽样函数及 seed 入库，同一名单用于两轮。该总体均值不按全语料作品占比加权。
 3. 使用已提交的同一方案 A prompt，预览第 1 轮注入 3 条，第 2 轮注入 2 条，按固定 seed 在 work 层间随机轮换；生成 seed 为 `42 + idx + attempt + (round−1)×100000`。`temperature=0.2`、`top_p=1.0`、`max_tokens=2048`，`retries=0`，SDK 隐式重试关闭。最多两轮；若均值低于下界则立即停止并报告，其他情况在两轮后停止等待人工决定。
 4. 每轮完整保留 20 条的相似度，即使未通过长度、段落、数字或复制率校验也纳入统计。API 失败记为缺失及原因，不对不足 20 条的结果作区间判定。标准差同时给 `ddof=0` 与 `ddof=1`，四分位用线性插值；报告均值、中位数、四分位、极值以及按 work 的分组结果。
-5. 每次运行的 `rebuild_report.json`（分轮文件名为 `rebuild_report_<run>.json`）记录请求模型完整标识、服务返回的模型标识/response id/时间/可用 fingerprint、UTC 调用日期时间、全部采样参数及逐次实际 seed、prompt git commit 与 SHA256、源文件 SHA256、候选池/入选范例、剔除/超限/重试/数字豁免及理由。无固定快照时明确记录未知，不猜测模型版本。
+5. 每次运行的 `rebuild_report.json`（分轮文件名为 `rebuild_report_<run>.json`）记录请求模型完整标识、服务返回的模型标识/response id/时间/可用 fingerprint、UTC 调用日期时间、全部采样参数（含 thinking 模式）及逐次实际 seed、prompt git commit 与 SHA256、调用代码 commit、源文件 SHA256、候选池/入选范例、剔除/超限/重试/数字豁免及理由。**响应 model 必须与请求标识严格相等，否则立即抛出 ModelIdentityMismatch，不重试、不接纳输出，并停止尚未发起的调用**；已在途请求无法撤回，仍留痕，整轮标记 aborted_model_mismatch，不作有效实验引用。无固定快照或服务端 seed 生效证明时明确记录未知，不猜测模型版本或确定性。
 6. `scripts/prompts/*.txt` 提交完整可复用 prompt 模板；实际展开后的 prompt 包含版权原文和范例，逐次完整存入本地 `corpus/generations/*_attempts.jsonl`，只在报告中记录 hash，不把这些文本提交。所有拒绝输出同样归档，只有通过校验的输出可进入 pairs 文件。全量入口需 `--allow-full`；本轮不执行全量，必须等人工明确放行。
 
-**已知局限**：参照只有 **13 条**，占历史 907 条的 **1.4%**，来源是 2025-08 的人工 review 日志，无法确认当初随机抽样还是择优展示；这是当前最大的方法论软肋。严格留一法只能防止当前样本进入自己的范例，不能消除日志选择偏差，也不提供一个独立的大样本测试集。SequenceMatcher 是表层重合的代理指标，不直接等价于白话化质量或语义保真；低分可能是有效改写，也可能是信息流失。对白密度和 jieba 专名密度同样是有误差的启发式估计。托管模型可能只返回可变别名，记录日期和响应元数据仍不能保证底座快照可复现。
+**模型对照预注册（2026-10-03）**：此前留一法、round1、round2 请求 `deepseek-chat`，53 个响应均为 **deepseek-flash**，三组结论全部标注“在 deepseek-flash 上得到”，不可引用为 deepseek-chat 的实验。官方更新日志记录该旧别名改指 Flash 非思考模式，同账户诊断能正常请求并返回 `deepseek-v4-pro`。仅再执行一次 20 条单变量模型对照：以 round2 本地归档为准，原文、完整展开 prompt、候选与实际范例、名单及顺序、逐条 seed、temperature=0.2、top_p=1.0、max_tokens=2048、并发数和零重试完全一致，只改请求模型为 `deepseek-v4-pro`。新请求显式 `thinking.type=disabled`，旧请求的非思考模式来自官方别名文档的推断而非当时显式记录，必须披露。调用前逐条 hash/参数验证，任何差异先报错，不调用 API。沿用 [0.51, 0.61] 及 0.65 / 0.68 / 0.70 原标准，结果与 round2 并排；本次结束即停止，不启动四臂消融或全量。
+
+**已知局限**：参照只有 **13 条**，占历史 907 条的 **1.4%**，来源是 2025-08 的人工 review 日志，无法确认当初随机抽样还是择优展示；这是当前最大的方法论软肋。严格留一法只能防止当前样本进入自己的范例，不能消除日志选择偏差，也不提供一个独立的大样本测试集。SequenceMatcher 是表层重合的代理指标，不直接等价于白话化质量或语义保真；低分可能是有效改写，也可能是信息流失。对白密度和 jieba 专名密度同样是有误差的启发式估计。**2025-08 使用的生成模型未知，本轮既有三组实际使用 Flash，跨模型比较的不确定性比此前记录更大，不能把差异全部归因于 prompt 或模型能力**。托管模型可能只返回可变别名，记录日期和响应元数据仍不能保证底座快照可复现；模型名称及速度本身不能证明其照抄倾向或因果关系。
 
 ### 1.6 原始文本（已恢复，`corpus/raw/`）
 
