@@ -3,14 +3,39 @@ from pathlib import Path
 from scripts.chunk_corpus import CorpusChunk
 from scripts.vernacularize import (
     Pair,
+    VernacularExample,
+    copy_similarity_limit,
+    dialogue_density,
     generate_pair,
     numerals_preserved,
     numeric_phrases,
     paragraph_count,
+    proper_noun_density,
     run_batch,
+    select_style_examples,
     text_similarity,
 )
 from tests.fakes import FakeGenerator
+
+
+def test_similarity_matches_vernacular_first_reference_metric() -> None:
+    # SequenceMatcher is order-sensitive; these strings expose that difference.
+    assert text_similarity("tide", "diet") == 0.5
+
+
+def test_few_shot_rotation_is_reproducible_and_excludes_target() -> None:
+    examples = [
+        VernacularExample(id=str(index), original="虚构原文", vernacular="虚构白话")
+        for index in range(14)
+    ]
+    first = select_style_examples(examples, chunk_id="0", attempt=1, seed=42)
+    second = select_style_examples(examples, chunk_id="0", attempt=2, seed=42)
+
+    assert len(first) == 3
+    assert len(second) == 2
+    assert not {example.id for example in first} & {example.id for example in second}
+    assert all(example.id != "0" for example in first + second)
+    assert first == select_style_examples(examples, chunk_id="0", attempt=1, seed=42)
 
 
 def test_restart_processes_only_remaining(tmp_path: Path) -> None:
@@ -101,6 +126,43 @@ def test_copied_original_is_retried() -> None:
     assert generator.calls == 2
     assert [issue.reason for issue in issues] == ["insufficient_rewrite"]
     assert text_similarity(chunk.original, pair.vernacular) == 0.0
+
+
+def test_copy_similarity_limit_uses_original_density_tiers() -> None:
+    narrative = "他沿着河岸走了很久。" * 20
+    mixed = "他说，你先回去。" * 7 + "他沿着河岸走了很久。" * 13
+    dialogue = "“你先回去。”他说。" * 20
+
+    assert copy_similarity_limit(narrative) == 0.65
+    assert copy_similarity_limit(mixed) == 0.68
+    assert copy_similarity_limit(dialogue) == 0.70
+    assert dialogue_density(dialogue) >= 0.50
+    assert proper_noun_density(narrative) < 0.10
+
+
+def test_irreducible_copy_is_rejected_and_reported_for_review(tmp_path: Path) -> None:
+    original = "他沿着河岸慢慢往前走，始终没有回头。" * 20
+
+    class CopyingGenerator:
+        def generate(self, prompt: str, **kwargs: object) -> str:
+            return original
+
+    chunk = CorpusChunk(id="测试_0001", work="测试", idx=1, original=original)
+    output = tmp_path / "pairs.jsonl"
+    result = run_batch(
+        [chunk],
+        output,
+        tmp_path / "report.json",
+        {},
+        CopyingGenerator(),
+        retries=1,
+    )
+
+    assert result.failed == ["测试_0001"]
+    assert result.succeeded == 0
+    assert len(result.copy_similarity_exceptions) == 1
+    assert result.copy_similarity_exceptions[0].similarity_limit == 0.65
+    assert not output.exists()
 
 
 def test_changed_numeral_modifier_is_retried() -> None:

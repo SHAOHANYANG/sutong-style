@@ -6,6 +6,7 @@ import argparse
 import difflib
 import json
 import os
+import random
 import re
 import threading
 from collections import Counter
@@ -13,6 +14,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Protocol
 
+import jieba.posseg as pseg
 import structlog
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -24,7 +26,15 @@ LOGGER = structlog.get_logger()
 OUTPUT_LOCK = threading.Lock()
 MIN_RATIO = 0.9
 MAX_RATIO = 1.3
-MAX_COPY_SIMILARITY = 0.84
+STRICT_COPY_SIMILARITY = 0.65
+MIXED_COPY_SIMILARITY = 0.68
+MAX_COPY_SIMILARITY = 0.70
+HIGH_DIALOGUE_DENSITY = 0.50
+MIXED_DIALOGUE_DENSITY = 0.20
+HIGH_PROPER_NOUN_DENSITY = 0.10
+MIXED_PROPER_NOUN_DENSITY = 0.07
+PROPER_NOUN_FLAGS = {"nr", "nrfg", "nrt", "ns", "nt", "nz"}
+DIALOGUE_UNIT = re.compile(r"[“”「」『』]|(?:说|问|答|喊|嚷|道)[，。！？：]")
 NUMERAL_PHRASE = re.compile(
     r"(?:差不多|将近|第|初|近|约|上)?"
     r"(?:[0-9０-９]+|[零〇一二两三四五六七八九十百千万亿]+)"
@@ -71,6 +81,9 @@ class AttemptIssue(BaseModel):
     reason: str
     length_ratio: float | None = None
     similarity: float | None = None
+    similarity_limit: float | None = None
+    dialogue_density: float | None = None
+    proper_noun_density: float | None = None
     expected_numerals: list[str] | None = None
     actual_numerals: list[str] | None = None
 
@@ -82,18 +95,22 @@ class RebuildReport(BaseModel):
     completed_after_run: int
     failed: list[str]
     out_of_range_attempts: list[AttemptIssue]
+    copy_similarity_exceptions: list[AttemptIssue]
     attempt_issues: list[AttemptIssue]
 
 
 PROMPT_TEMPLATE = """你在重建一份“现代白话 → 文学原文”的平行语料。
 请把下面的文学原文彻底改写成现代、自然、易懂的口头白话。
-采用保守方案 A：保留信息顺序和叙事密度，但不要保留原文的书面措辞。
+采用方案 A：参照完整旧样本的改写强度，保留每段的全部信息和情节顺序。
+先理解这一段发生了什么，再用自己的日常说法重新讲出来。
+段落结构保持一致，但段内可以拆句、合句、调整主谓宾和定语位置。
 
 硬性要求：
 1. 人名、地名、职官称谓、数字、日期、数量必须逐一保留。
 2. 情节、动作、因果、对话内容不得删减、概括或增补。
 3. 原文几段，白话也必须几段；段落顺序不变。
-4. 每一句都要认真改写。长句拆成短句，书面语、成语、文言残留全部换成日常口语。
+4. 改写句子骨架和叙述方式，而不只是逐词换同义词。长句拆成短句，
+   定语改成独立说明，书面语、成语、文言残留换成日常口语。
 5. 原文中没有引号的对话，白话中改用现代常规引号。
 6. 白话中文字数必须为原文的 0.9–1.3 倍。
 7. 只输出白话正文，不要解释，不要标题，不要 Markdown 围栏。
@@ -105,6 +122,7 @@ PROMPT_TEMPLATE = """你在重建一份“现代白话 → 文学原文”的平
 
 只添加引号、标点或替换少量词语不算白话改写，会被判定失败并要求重做。
 不要概括，不要加原文没有的闲聊；改变的是表达方式，不是事实和内容。
+人名、地名、称谓、数字按原样保留；它们周围的描述和对白表达仍应重新组织。
 
 原文：
 {original}
@@ -161,7 +179,8 @@ def build_prompt(
     if feedback:
         retry_instruction = (
             f"上一次结果未通过校验：{feedback}\n"
-            f"请在上一版白话上定向修正，其余信息不要改动：\n{previous_output}\n\n"
+            "下面的上一版仅用于定位问题。重新从原文组织表达，保留事实，"
+            f"不要沿用上一版的句子骨架：\n{previous_output}\n\n"
         )
     return demonstrations + retry_instruction + PROMPT_TEMPLATE.format(original=original)
 
@@ -180,10 +199,53 @@ def paragraph_count(text: str) -> int:
 
 
 def text_similarity(original: str, vernacular: str) -> float:
-    """Measure copy similarity after removing whitespace only."""
-    left = re.sub(r"\s+", "", original)
-    right = re.sub(r"\s+", "", vernacular)
-    return difflib.SequenceMatcher(None, left, right).ratio()
+    """Measure direct copy similarity using the salvaged-reference metric."""
+    return difflib.SequenceMatcher(None, vernacular, original).ratio()
+
+
+def select_style_examples(
+    examples: list[VernacularExample], *, chunk_id: str, attempt: int, seed: int
+) -> list[VernacularExample]:
+    """Rotate 2-3 complete demonstrations deterministically, excluding the target."""
+    eligible = [example for example in examples if example.id != chunk_id]
+    random.Random(f"{seed}:{chunk_id}").shuffle(eligible)
+    if not eligible:
+        return []
+    count = min(2 + attempt % 2, len(eligible))
+    start = 3 * (attempt - 1)
+    return [eligible[(start + offset) % len(eligible)] for offset in range(count)]
+
+
+def dialogue_density(text: str) -> float:
+    """Estimate the CJK-character share occupied by dialogue-bearing units."""
+    total = cjk_length(text)
+    if not total:
+        return 0.0
+    units = re.split(r"(?<=[。！？；])|\n", text)
+    dialogue_chars = sum(cjk_length(unit) for unit in units if DIALOGUE_UNIT.search(unit))
+    return dialogue_chars / total
+
+
+def proper_noun_density(text: str) -> float:
+    """Estimate the CJK-character share tagged as names, places, or organizations."""
+    total = cjk_length(text)
+    if not total:
+        return 0.0
+    proper_chars = sum(
+        cjk_length(word) for word, flag in pseg.cut(text) if flag in PROPER_NOUN_FLAGS
+    )
+    return proper_chars / total
+
+
+def copy_similarity_limit(text: str) -> float:
+    """Choose a reference-calibrated threshold from original-text densities."""
+    dialogue = dialogue_density(text)
+    proper_nouns = proper_noun_density(text)
+    if dialogue >= HIGH_DIALOGUE_DENSITY or proper_nouns >= HIGH_PROPER_NOUN_DENSITY:
+        return MAX_COPY_SIMILARITY
+    if dialogue >= MIXED_DIALOGUE_DENSITY or proper_nouns >= MIXED_PROPER_NOUN_DENSITY:
+        return MIXED_COPY_SIMILARITY
+    return STRICT_COPY_SIMILARITY
 
 
 def generate_pair(
@@ -200,13 +262,19 @@ def generate_pair(
     original_length = cjk_length(chunk.original)
     feedback = ""
     previous_output = ""
+    chunk_dialogue_density = dialogue_density(chunk.original)
+    chunk_proper_noun_density = proper_noun_density(chunk.original)
+    similarity_limit = copy_similarity_limit(chunk.original)
+    lowest_over_limit: float | None = None
     for attempt in range(1, retries + 2):
         try:
             vernacular = _strip_fences(
                 generator.generate(
                     build_prompt(
                         chunk.original,
-                        [example for example in examples or [] if example.id != chunk.id][:2],
+                        select_style_examples(
+                            examples or [], chunk_id=chunk.id, attempt=attempt, seed=seed
+                        ),
                         feedback,
                         previous_output,
                     ),
@@ -258,7 +326,9 @@ def generate_pair(
                 )
                 continue
             similarity = text_similarity(chunk.original, vernacular)
-            if similarity > MAX_COPY_SIMILARITY:
+            if similarity > similarity_limit:
+                if lowest_over_limit is None or similarity < lowest_over_limit:
+                    lowest_over_limit = similarity
                 issues.append(
                     AttemptIssue(
                         id=chunk.id,
@@ -266,9 +336,15 @@ def generate_pair(
                         reason="insufficient_rewrite",
                         length_ratio=round(ratio, 4),
                         similarity=round(similarity, 4),
+                        similarity_limit=similarity_limit,
+                        dialogue_density=round(chunk_dialogue_density, 4),
+                        proper_noun_density=round(chunk_proper_noun_density, 4),
                     )
                 )
-                feedback = "改写幅度太小，不能只加标点或替换少量词；请把书面措辞改成口头白话。"
+                feedback = (
+                    f"序列相似度 {similarity:.3f} 超过本段上限 {similarity_limit:.2f}。"
+                    "不能只加标点或替换少量词；请改写句子骨架，把书面措辞换成口头白话。"
+                )
                 continue
             pair = Pair(
                 id=chunk.id,
@@ -281,6 +357,18 @@ def generate_pair(
             return pair, issues
         except Exception as exc:
             issues.append(AttemptIssue(id=chunk.id, attempt=attempt, reason=type(exc).__name__))
+    if lowest_over_limit is not None:
+        issues.append(
+            AttemptIssue(
+                id=chunk.id,
+                attempt=retries + 1,
+                reason="copy_similarity_exception",
+                similarity=round(lowest_over_limit, 4),
+                similarity_limit=similarity_limit,
+                dialogue_density=round(chunk_dialogue_density, 4),
+                proper_noun_density=round(chunk_proper_noun_density, 4),
+            )
+        )
     return None, issues
 
 
@@ -411,6 +499,9 @@ def run_batch(
         completed_after_run=len(completed) + succeeded,
         failed=failed,
         out_of_range_attempts=[issue for issue in issues if issue.reason == "length_out_of_range"],
+        copy_similarity_exceptions=[
+            issue for issue in issues if issue.reason == "copy_similarity_exception"
+        ],
         attempt_issues=issues,
     )
     report_path.write_text(
