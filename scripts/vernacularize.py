@@ -4,24 +4,43 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import json
 import os
 import random
 import re
+import subprocess
 import threading
 from collections import Counter
+from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
+from urllib.parse import urlsplit
 
 import jieba.posseg as pseg
 import structlog
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from scripts.chunk_corpus import CorpusChunk, cjk_length
+from scripts.rebuild_reporting import (
+    AttemptRecord,
+    Distribution,
+    DistributionReport,
+    Exclusion,
+    ProviderMetadata,
+    RunMetadata,
+    SamplingParameters,
+    append_artifacts,
+    describe,
+    summarize,
+)
 from scripts.split_corpus import CorpusSplit
 
+PROMPT_DIR = Path(__file__).parent / "prompts"
+EXCLUDED_REFERENCE_ID = "妇女生活_0015"
 LOGGER = structlog.get_logger()
 OUTPUT_LOCK = threading.Lock()
 MIN_RATIO = 0.9
@@ -71,6 +90,7 @@ class VernacularExample(BaseModel):
     """A local-only plan-A style demonstration loaded from salvaged data."""
 
     id: str
+    work: str = ""
     original: str
     vernacular: str
 
@@ -89,6 +109,7 @@ class AttemptIssue(BaseModel):
 
 
 class RebuildReport(BaseModel):
+    status: str = "complete"
     total_requested: int
     already_done: int
     succeeded: int
@@ -97,36 +118,16 @@ class RebuildReport(BaseModel):
     out_of_range_attempts: list[AttemptIssue]
     copy_similarity_exceptions: list[AttemptIssue]
     attempt_issues: list[AttemptIssue]
+    metadata: RunMetadata | None = None
+    attempts: list[AttemptRecord] = Field(default_factory=list)
+    per_case: list[AttemptRecord] = Field(default_factory=list)
+    similarity_distribution: DistributionReport | None = None
+    old_vs_new_distribution: DistributionReport | None = None
+    reference_distribution: Distribution | None = None
+    artifacts_path: str | None = None
 
 
-PROMPT_TEMPLATE = """你在重建一份“现代白话 → 文学原文”的平行语料。
-请把下面的文学原文彻底改写成现代、自然、易懂的口头白话。
-采用方案 A：参照完整旧样本的改写强度，保留每段的全部信息和情节顺序。
-先理解这一段发生了什么，再用自己的日常说法重新讲出来。
-段落结构保持一致，但段内可以拆句、合句、调整主谓宾和定语位置。
-
-硬性要求：
-1. 人名、地名、职官称谓、数字、日期、数量必须逐一保留。
-2. 情节、动作、因果、对话内容不得删减、概括或增补。
-3. 原文几段，白话也必须几段；段落顺序不变。
-4. 改写句子骨架和叙述方式，而不只是逐词换同义词。长句拆成短句，
-   定语改成独立说明，书面语、成语、文言残留换成日常口语。
-5. 原文中没有引号的对话，白话中改用现代常规引号。
-6. 白话中文字数必须为原文的 0.9–1.3 倍。
-7. 只输出白话正文，不要解释，不要标题，不要 Markdown 围栏。
-
-改写强度示例（例句是虚构的）：
-- “他未曾料到客人会来”改成“他没想到客人会来”
-- “她不无惆怅地凝望庭院”改成“她看着院子，心里挺难受”
-- “他径直前往，沉默良久”改成“他直接走过去，好一会儿没说话”
-
-只添加引号、标点或替换少量词语不算白话改写，会被判定失败并要求重做。
-不要概括，不要加原文没有的闲聊；改变的是表达方式，不是事实和内容。
-人名、地名、称谓、数字按原样保留；它们周围的描述和对白表达仍应重新组织。
-
-原文：
-{original}
-"""
+PROMPT_TEMPLATE = (PROMPT_DIR / "vernacularize_a.txt").read_text(encoding="utf-8")
 
 
 def numeric_phrases(text: str) -> Counter[str]:
@@ -167,20 +168,24 @@ def build_prompt(
 ) -> str:
     demonstrations = ""
     if examples:
+        example_template = (PROMPT_DIR / "example.txt").read_text(encoding="utf-8")
         rendered = [
-            f"范例 {index} 原文：\n{example.original}\n范例 {index} 白话：\n{example.vernacular}"
+            example_template.format(
+                index=index, original=example.original, vernacular=example.vernacular
+            )
             for index, example in enumerate(examples, start=1)
         ]
         demonstrations = (
-            "下面是旧流程留下的方案 A 范例。模仿它的白话强度，"
-            "但不要借用范例中的事实：\n\n" + "\n\n".join(rendered) + "\n\n"
+            (PROMPT_DIR / "examples.txt")
+            .read_text(encoding="utf-8")
+            .format(examples="\n".join(rendered))
         )
     retry_instruction = ""
     if feedback:
         retry_instruction = (
-            f"上一次结果未通过校验：{feedback}\n"
-            "下面的上一版仅用于定位问题。重新从原文组织表达，保留事实，"
-            f"不要沿用上一版的句子骨架：\n{previous_output}\n\n"
+            (PROMPT_DIR / "retry.txt")
+            .read_text(encoding="utf-8")
+            .format(feedback=feedback, previous_output=previous_output)
         )
     return demonstrations + retry_instruction + PROMPT_TEMPLATE.format(original=original)
 
@@ -206,14 +211,26 @@ def text_similarity(original: str, vernacular: str) -> float:
 def select_style_examples(
     examples: list[VernacularExample], *, chunk_id: str, attempt: int, seed: int
 ) -> list[VernacularExample]:
-    """Rotate 2-3 complete demonstrations deterministically, excluding the target."""
+    """Select 2-3 demonstrations across randomly ordered work strata."""
     eligible = [example for example in examples if example.id != chunk_id]
-    random.Random(f"{seed}:{chunk_id}").shuffle(eligible)
     if not eligible:
         return []
+    by_work: dict[str, list[VernacularExample]] = {}
+    for example in eligible:
+        by_work.setdefault(example.work or example.id.rsplit("_", 1)[0], []).append(example)
+    rng = random.Random(f"{seed}:{chunk_id}:{attempt}")
+    works = sorted(by_work)
+    rng.shuffle(works)
+    for candidates in by_work.values():
+        candidates.sort(key=lambda example: example.id)
+        rng.shuffle(candidates)
     count = min(2 + attempt % 2, len(eligible))
-    start = 3 * (attempt - 1)
-    return [eligible[(start + offset) % len(eligible)] for offset in range(count)]
+    selected: list[VernacularExample] = []
+    while len(selected) < count:
+        for work in works:
+            if by_work[work] and len(selected) < count:
+                selected.append(by_work[work].pop())
+    return selected
 
 
 def dialogue_density(text: str) -> float:
@@ -256,117 +273,143 @@ def generate_pair(
     retries: int,
     seed: int,
     examples: list[VernacularExample] | None = None,
+    records: list[AttemptRecord] | None = None,
+    sampling: SamplingParameters | None = None,
+    reference: VernacularExample | None = None,
+    round_number: int = 1,
+    provider_metadata: Callable[[], ProviderMetadata] | None = None,
 ) -> tuple[Pair | None, list[AttemptIssue]]:
-    """Generate one valid-length pair, retrying failures without aborting the batch."""
+    """Keep every candidate's measurements, including all rejection reasons."""
     issues: list[AttemptIssue] = []
+    parameters = sampling or SamplingParameters(seed=seed)
     original_length = cjk_length(chunk.original)
     feedback = ""
     previous_output = ""
-    chunk_dialogue_density = dialogue_density(chunk.original)
-    chunk_proper_noun_density = proper_noun_density(chunk.original)
-    similarity_limit = copy_similarity_limit(chunk.original)
+    dialogue = dialogue_density(chunk.original)
+    proper_nouns = proper_noun_density(chunk.original)
+    limit = copy_similarity_limit(chunk.original)
+    eligible = [
+        example
+        for example in examples or []
+        if example.id != chunk.id and example.original != chunk.original
+    ]
     lowest_over_limit: float | None = None
     for attempt in range(1, retries + 2):
+        selected = select_style_examples(
+            eligible, chunk_id=chunk.id, attempt=attempt + round_number - 1, seed=seed
+        )
+        prompt = build_prompt(chunk.original, selected, feedback, previous_output)
+        call_seed = seed + chunk.idx + attempt + (round_number - 1) * 100_000
+        record = AttemptRecord(
+            id=chunk.id,
+            work=chunk.work,
+            attempt=attempt,
+            called_at_utc=datetime.now(UTC).isoformat(),
+            seed=call_seed,
+            eligible_example_ids=[example.id for example in eligible],
+            selected_example_ids=[example.id for example in selected],
+            prompt_sha256=hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+            similarity_limit=limit,
+            dialogue_density=dialogue,
+            proper_noun_density=proper_nouns,
+            original=chunk.original,
+            prompt=prompt,
+        )
         try:
             vernacular = _strip_fences(
                 generator.generate(
-                    build_prompt(
-                        chunk.original,
-                        select_style_examples(
-                            examples or [], chunk_id=chunk.id, attempt=attempt, seed=seed
-                        ),
-                        feedback,
-                        previous_output,
-                    ),
-                    seed=seed + chunk.idx + attempt,
+                    prompt,
+                    seed=call_seed,
+                    temperature=parameters.temperature,
+                    top_p=parameters.top_p,
+                    max_tokens=parameters.max_tokens,
                 )
             )
-            ratio = cjk_length(vernacular) / original_length if original_length else 0.0
+            if provider_metadata:
+                record.provider = provider_metadata()
+            record.output = vernacular
+            record.output_sha256 = hashlib.sha256(vernacular.encode("utf-8")).hexdigest()
+            record.length_ratio = (
+                cjk_length(vernacular) / original_length if original_length else 0.0
+            )
+            record.similarity = text_similarity(chunk.original, vernacular)
+            if reference:
+                record.old_vs_new_similarity = text_similarity(reference.vernacular, vernacular)
             previous_output = vernacular
-            if not MIN_RATIO <= ratio <= MAX_RATIO:
-                issues.append(
-                    AttemptIssue(
-                        id=chunk.id,
-                        attempt=attempt,
-                        reason="length_out_of_range",
-                        length_ratio=round(ratio, 4),
-                    )
-                )
-                feedback = "字数不在原文的 0.9–1.3 倍内，请在完整保留信息的前提下调整长度。"
-                continue
-            if paragraph_count(vernacular) != paragraph_count(chunk.original):
-                issues.append(
-                    AttemptIssue(
-                        id=chunk.id,
-                        attempt=attempt,
-                        reason="paragraph_count_mismatch",
-                        length_ratio=round(ratio, 4),
-                    )
-                )
-                feedback = (
-                    f"段落数必须与原文同为 {paragraph_count(chunk.original)} 段，不要拆段或合段。"
-                )
-                continue
-            if not numerals_preserved(chunk.original, vernacular):
-                issues.append(
-                    AttemptIssue(
-                        id=chunk.id,
-                        attempt=attempt,
-                        reason="numeral_mismatch",
-                        length_ratio=round(ratio, 4),
-                        expected_numerals=sorted(numeric_facts(chunk.original)),
-                        actual_numerals=sorted(numeric_facts(vernacular)),
-                    )
-                )
-                protected = [match.group(0) for match in NUMERAL_PHRASE.finditer(chunk.original)]
-                feedback = (
-                    "下列数字短语被遗漏或改动，必须原样保留："
-                    + "、".join(protected)
-                    + "。例如“万人”不能改成“上万人”。"
-                )
-                continue
-            similarity = text_similarity(chunk.original, vernacular)
-            if similarity > similarity_limit:
-                if lowest_over_limit is None or similarity < lowest_over_limit:
-                    lowest_over_limit = similarity
-                issues.append(
-                    AttemptIssue(
-                        id=chunk.id,
-                        attempt=attempt,
-                        reason="insufficient_rewrite",
-                        length_ratio=round(ratio, 4),
-                        similarity=round(similarity, 4),
-                        similarity_limit=similarity_limit,
-                        dialogue_density=round(chunk_dialogue_density, 4),
-                        proper_noun_density=round(chunk_proper_noun_density, 4),
-                    )
-                )
-                feedback = (
-                    f"序列相似度 {similarity:.3f} 超过本段上限 {similarity_limit:.2f}。"
-                    "不能只加标点或替换少量词；请改写句子骨架，把书面措辞换成口头白话。"
-                )
-                continue
-            pair = Pair(
-                id=chunk.id,
-                work=chunk.work,
-                idx=chunk.idx,
-                vernacular=vernacular,
-                original=chunk.original,
-                split=split_by_id.get(chunk.id, "train"),
+            record.numerical_waivers = sorted(
+                {
+                    phrase
+                    for text in (chunk.original, vernacular)
+                    for phrase in numeric_phrases(text)
+                    if GRAMMATICAL_ONE.fullmatch(phrase)
+                }
             )
-            return pair, issues
+            if record.provider.finish_reason == "length":
+                record.reasons.append("provider_output_truncated")
+            if not MIN_RATIO <= record.length_ratio <= MAX_RATIO:
+                record.reasons.append("length_out_of_range")
+            if paragraph_count(vernacular) != paragraph_count(chunk.original):
+                record.reasons.append("paragraph_count_mismatch")
+            if not numerals_preserved(chunk.original, vernacular):
+                record.reasons.append("numeral_mismatch")
+            if record.similarity > limit:
+                record.reasons.append("insufficient_rewrite")
+                if lowest_over_limit is None or record.similarity < lowest_over_limit:
+                    lowest_over_limit = record.similarity
+            record.accepted = not record.reasons
+            if record.accepted:
+                if records is not None:
+                    records.append(record)
+                return Pair(
+                    id=chunk.id,
+                    work=chunk.work,
+                    idx=chunk.idx,
+                    vernacular=vernacular,
+                    original=chunk.original,
+                    split=split_by_id.get(chunk.id, "train"),
+                ), issues
+            for reason in record.reasons:
+                issues.append(
+                    AttemptIssue(
+                        id=chunk.id,
+                        attempt=attempt,
+                        reason=reason,
+                        length_ratio=record.length_ratio,
+                        similarity=record.similarity,
+                        similarity_limit=limit,
+                        dialogue_density=dialogue,
+                        proper_noun_density=proper_nouns,
+                        expected_numerals=sorted(numeric_facts(chunk.original))
+                        if reason == "numeral_mismatch"
+                        else None,
+                        actual_numerals=sorted(numeric_facts(vernacular))
+                        if reason == "numeral_mismatch"
+                        else None,
+                    )
+                )
+            feedback = (
+                "校验问题："
+                + "、".join(record.reasons)
+                + f"。段落数必须为 {paragraph_count(chunk.original)}，中文字数比为 0.9–1.3。"
+                + f"相似度上限 {limit:.2f}。必须保留数字短语："
+                + "、".join(numeric_phrases(chunk.original))
+            )
         except Exception as exc:
+            # Do not include provider exception messages; they may contain credentials or text.
+            record.reasons.append(type(exc).__name__)
             issues.append(AttemptIssue(id=chunk.id, attempt=attempt, reason=type(exc).__name__))
+        if records is not None:
+            records.append(record)
     if lowest_over_limit is not None:
         issues.append(
             AttemptIssue(
                 id=chunk.id,
                 attempt=retries + 1,
                 reason="copy_similarity_exception",
-                similarity=round(lowest_over_limit, 4),
-                similarity_limit=similarity_limit,
-                dialogue_density=round(chunk_dialogue_density, 4),
-                proper_noun_density=round(chunk_proper_noun_density, 4),
+                similarity=lowest_over_limit,
+                similarity_limit=limit,
+                dialogue_density=dialogue,
+                proper_noun_density=proper_nouns,
             )
         )
     return None, issues
@@ -390,12 +433,12 @@ def load_split(path: Path) -> dict[str, str]:
 
 
 def load_preview_reference(path: Path) -> list[CorpusChunk]:
-    """Load only the 14 complete salvaged originals for human A/B comparison."""
+    """Load the 13 non-anomalous salvaged originals for leave-one-out validation."""
     chunks: list[CorpusChunk] = []
     with path.open(encoding="utf-8") as handle:
         for line in handle:
             row = json.loads(line)
-            if not row.get("maybe_truncated", True):
+            if not row.get("maybe_truncated", True) and row["id"] != EXCLUDED_REFERENCE_ID:
                 chunks.append(
                     CorpusChunk(
                         id=row["id"], work=row["work"], idx=row["idx"], original=row["original"]
@@ -410,29 +453,47 @@ def load_style_examples(path: Path) -> list[VernacularExample]:
     with path.open(encoding="utf-8") as handle:
         for line in handle:
             row = json.loads(line)
-            if not row.get("maybe_truncated", True):
+            if not row.get("maybe_truncated", True) and row["id"] != EXCLUDED_REFERENCE_ID:
                 examples.append(
                     VernacularExample(
-                        id=row["id"], original=row["original"], vernacular=row["vernacular"]
+                        id=row["id"],
+                        original=row["original"],
+                        vernacular=row["vernacular"],
+                        work=row["work"],
                     )
                 )
     return sorted(examples, key=lambda example: cjk_length(example.original))
 
 
-def select_work_balanced_fill(
-    chunks: list[CorpusChunk], *, count: int, excluded_ids: set[str]
+def stratified_sample(
+    chunks: list[CorpusChunk], *, count: int, seed: int, excluded_ids: set[str] | None = None
 ) -> list[CorpusChunk]:
-    selected: list[CorpusChunk] = []
+    """Sample randomly within work strata with approximately equal allocation."""
+    excluded = excluded_ids or set()
     by_work: dict[str, list[CorpusChunk]] = {}
-    for chunk in chunks:
-        if chunk.id not in excluded_ids:
+    for chunk in sorted(chunks, key=lambda item: item.id):
+        if chunk.id not in excluded:
             by_work.setdefault(chunk.work, []).append(chunk)
-    while len(selected) < count and any(by_work.values()):
-        for work in sorted(by_work):
+    if count < 1 or count > sum(map(len, by_work.values())):
+        raise ValueError("抽样数超出可用样本范围")
+    rng = random.Random(seed)
+    works = sorted(by_work)
+    rng.shuffle(works)
+    for candidates in by_work.values():
+        rng.shuffle(candidates)
+    selected: list[CorpusChunk] = []
+    while len(selected) < count:
+        for work in works:
             if by_work[work] and len(selected) < count:
-                candidates = by_work[work]
-                selected.append(candidates.pop(len(candidates) // 2))
-    return selected
+                selected.append(by_work[work].pop())
+    return sorted(selected, key=lambda chunk: chunk.id)
+
+
+def select_work_balanced_fill(
+    chunks: list[CorpusChunk], *, count: int, excluded_ids: set[str], seed: int = 42
+) -> list[CorpusChunk]:
+    """Compatibility entry point now using stratified random sampling."""
+    return stratified_sample(chunks, count=count, seed=seed, excluded_ids=excluded_ids)
 
 
 def run_batch(
@@ -446,8 +507,11 @@ def run_batch(
     retries: int = 2,
     seed: int = 42,
     examples: list[VernacularExample] | None = None,
+    metadata: RunMetadata | None = None,
+    references: list[VernacularExample] | None = None,
+    provider_metadata: Callable[[], ProviderMetadata] | None = None,
 ) -> RebuildReport:
-    """Run a resumable concurrent batch and persist every completed pair immediately."""
+    """Run a resumable batch; retain rejected outputs without filtering distributions."""
     completed = load_completed(output)
     remaining = [chunk for chunk in chunks if chunk.id not in completed]
     LOGGER.info(
@@ -460,30 +524,78 @@ def run_batch(
     succeeded = 0
     failed: list[str] = []
     issues: list[AttemptIssue] = []
+    all_records: list[AttemptRecord] = []
+    last_records: list[AttemptRecord] = []
+    reference_by_id = {example.id: example for example in references or []}
+    if references:
+        for chunk in chunks:
+            eligible = [
+                example
+                for example in examples or []
+                if example.id != chunk.id and example.original != chunk.original
+            ]
+            if len(eligible) != 12:
+                raise ValueError("每个留一 fold 必须恰好有 12 条候选范例")
+    artifacts_path = Path("corpus/generations") / (report_path.stem + "_attempts.jsonl")
+    if metadata is None:
+        artifacts_path = report_path.with_suffix(".attempts.jsonl")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    initial = RebuildReport(
+        status="in_progress",
+        total_requested=len(chunks),
+        already_done=len(completed),
+        succeeded=0,
+        completed_after_run=len(completed),
+        failed=[],
+        out_of_range_attempts=[],
+        copy_similarity_exceptions=[],
+        attempt_issues=[],
+        metadata=metadata,
+        artifacts_path=str(artifacts_path),
+    )
+    report_path.write_text(initial.model_dump_json(indent=2) + "\n", encoding="utf-8")
+
+    def process(chunk: CorpusChunk) -> tuple[Pair | None, list[AttemptIssue], list[AttemptRecord]]:
+        records: list[AttemptRecord] = []
+        pair, pair_issues = generate_pair(
+            chunk,
+            split_by_id,
+            generator,
+            retries=retries,
+            seed=seed,
+            examples=examples,
+            records=records,
+            sampling=metadata.sampling if metadata else None,
+            reference=reference_by_id.get(chunk.id),
+            round_number=metadata.round if metadata else 1,
+            provider_metadata=provider_metadata,
+        )
+        return pair, pair_issues, records
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
-        futures: dict[Future[tuple[Pair | None, list[AttemptIssue]]], CorpusChunk] = {
-            executor.submit(
-                generate_pair,
-                chunk,
-                split_by_id,
-                generator,
-                retries=retries,
-                seed=seed,
-                examples=examples,
-            ): chunk
-            for chunk in remaining
-        }
+        futures: dict[
+            Future[tuple[Pair | None, list[AttemptIssue], list[AttemptRecord]]], CorpusChunk
+        ] = {executor.submit(process, chunk): chunk for chunk in remaining}
         for processed, future in enumerate(as_completed(futures), start=1):
             chunk = futures[future]
-            pair, pair_issues = future.result()
+            pair, pair_issues, records = future.result()
             issues.extend(pair_issues)
+            all_records.extend(records)
+            last_records.append(records[-1])
+            append_artifacts(artifacts_path, records)
             if pair is None:
                 failed.append(chunk.id)
             else:
                 with OUTPUT_LOCK, output.open("a", encoding="utf-8", newline="\n") as handle:
                     handle.write(pair.model_dump_json() + "\n")
                 succeeded += 1
+            LOGGER.info(
+                "vernacularize_case",
+                id=chunk.id,
+                similarity=records[-1].similarity,
+                old_vs_new=records[-1].old_vs_new_similarity,
+                reasons=records[-1].reasons,
+            )
             if processed % 20 == 0 or processed == len(remaining):
                 LOGGER.info(
                     "vernacularize_progress",
@@ -491,23 +603,137 @@ def run_batch(
                     ok=succeeded,
                     failed=len(failed),
                 )
-
+    # Resume does not masquerade previously produced pairs as new external calls.
+    if metadata:
+        metadata.completed_at_utc = datetime.now(UTC).isoformat()
+        metadata.exclusions.extend(
+            Exclusion(id=chunk.id, reason="already_done; no_new_call_in_this_run")
+            for chunk in chunks
+            if chunk.id in completed
+        )
+    last_records.sort(key=lambda record: record.id)
     report = RebuildReport(
         total_requested=len(chunks),
         already_done=len(completed),
         succeeded=succeeded,
         completed_after_run=len(completed) + succeeded,
-        failed=failed,
+        failed=sorted(failed),
         out_of_range_attempts=[issue for issue in issues if issue.reason == "length_out_of_range"],
         copy_similarity_exceptions=[
             issue for issue in issues if issue.reason == "copy_similarity_exception"
         ],
-        attempt_issues=issues,
+        attempt_issues=sorted(issues, key=lambda issue: (issue.id, issue.attempt, issue.reason)),
+        metadata=metadata,
+        attempts=sorted(all_records, key=lambda record: (record.id, record.attempt)),
+        per_case=last_records,
+        similarity_distribution=summarize(
+            last_records, expected_ids=[chunk.id for chunk in chunks]
+        ),
+        old_vs_new_distribution=summarize(
+            last_records, compare_old=True, expected_ids=[chunk.id for chunk in chunks]
+        )
+        if references
+        else None,
+        reference_distribution=describe(
+            [text_similarity(example.original, example.vernacular) for example in references]
+        )
+        if references
+        else None,
+        artifacts_path=str(artifacts_path),
     )
     report_path.write_text(
         json.dumps(report.model_dump(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     return report
+
+
+def run_metadata(
+    args: argparse.Namespace,
+    chunks: list[CorpusChunk],
+    examples: list[VernacularExample],
+) -> RunMetadata:
+    """Require committed prompt code and record source hashes before any API request."""
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+    ).stdout.strip()
+    prompt_files = sorted(PROMPT_DIR.glob("*.txt"))
+    paths = [str(path.relative_to(Path.cwd())) for path in prompt_files]
+    dirty = subprocess.run(
+        [
+            "git",
+            "diff",
+            "HEAD",
+            "--",
+            *paths,
+            "scripts/vernacularize.py",
+            "scripts/rebuild_reporting.py",
+            "infra/openai_generator.py",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    ).stdout
+    if dirty:
+        raise ValueError("外部运行前必须提交 prompt 与调用代码")
+    tracked = subprocess.run(
+        ["git", "ls-files", "--", *paths], check=True, capture_output=True, text=True
+    ).stdout.splitlines()
+    if len(tracked) != len(paths):
+        raise ValueError("所有 prompt 模板必须已提交")
+    exclusions: list[Exclusion] = []
+    if args.style_reference:
+        with args.style_reference.open(encoding="utf-8") as handle:
+            for line in handle:
+                row = json.loads(line)
+                if row.get("maybe_truncated", True) or row["id"] == EXCLUDED_REFERENCE_ID:
+                    ratio = cjk_length(row["vernacular"]) / max(cjk_length(row["original"]), 1)
+                    exclusions.append(
+                        Exclusion(
+                            id=row["id"],
+                            reason="original_side_truncated_anomaly"
+                            if row["id"] == EXCLUDED_REFERENCE_ID
+                            else "source_log_marked_truncated",
+                            length_ratio=ratio,
+                        )
+                    )
+    sources = [args.chunks, args.split]
+    if args.style_reference:
+        sources.append(args.style_reference)
+    return RunMetadata(
+        model=os.environ.get("VERNACULARIZE_MODEL", "deepseek-chat"),
+        endpoint_host=urlsplit(os.environ.get("LLM_BASE_URL", "")).hostname,
+        sampling=SamplingParameters(
+            temperature=args.temperature,
+            top_p=args.top_p,
+            max_tokens=args.max_tokens,
+            seed=args.seed,
+        ),
+        prompt_git_commit=commit,
+        prompt_path="scripts/prompts/vernacularize_a.txt",
+        prompt_sha256=hashlib.sha256(
+            b"".join(path.read_bytes() for path in prompt_files)
+        ).hexdigest(),
+        mode="leave_one_out"
+        if args.preview_reference
+        else "stratified_preview"
+        if args.limit
+        else "full_rebuild",
+        round=args.round,
+        retries=args.retries,
+        concurrency=args.concurrency,
+        sampling_method="all_13_leave_one_out"
+        if args.preview_reference
+        else "equal_work_allocation_random_within_work"
+        if args.limit
+        else "all_chunks",
+        selected_ids=[chunk.id for chunk in chunks],
+        example_pool_ids=[example.id for example in examples],
+        source_sha256={
+            str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources
+        },
+        exclusions=exclusions,
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -522,11 +748,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--retries", type=int, default=2)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--round", type=int, choices=[1, 2], default=1)
+    parser.add_argument("--temperature", type=float, default=0.2)
+    parser.add_argument("--top-p", type=float, default=1.0)
+    parser.add_argument("--max-tokens", type=int, default=2048)
+    parser.add_argument("--allow-full", action="store_true", help="仅在人工明确放行全量之后使用")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if not args.limit and not args.preview_reference and not args.allow_full:
+        LOGGER.error("full_run_requires_explicit_release")
+        return 1
+    if args.retries < 0:
+        raise ValueError("retries 不得为负数")
     load_dotenv()
     api_key = os.environ.get("LLM_API_KEY")
     if not api_key:
@@ -535,18 +771,33 @@ def main() -> int:
 
     from infra.openai_generator import OpenAICompatibleGenerator
 
+    structlog.configure(processors=[structlog.processors.JSONRenderer(ensure_ascii=False)])
     chunks = load_chunks(args.chunks)
+    examples = load_style_examples(args.style_reference) if args.style_reference else []
+    references: list[VernacularExample] | None = None
     if args.preview_reference:
-        preview = load_preview_reference(args.preview_reference)
-        fill_count = max(0, (args.limit or len(preview)) - len(preview))
-        preview.extend(
-            select_work_balanced_fill(
-                chunks, count=fill_count, excluded_ids={chunk.id for chunk in preview}
-            )
-        )
-        chunks = preview
+        references = load_style_examples(args.preview_reference)
+        if len(references) != 13 or len(examples) != 13:
+            raise ValueError("留一法必须使用剔除异常后的 13 条完整参照")
+        if {row.id for row in references} != {row.id for row in examples}:
+            raise ValueError("留一法的范例池必须正好为同一组 13 条")
+        chunks = load_preview_reference(args.preview_reference)
     elif args.limit is not None:
-        chunks = chunks[: args.limit]
+        excluded_ids = {example.id for example in examples} | {EXCLUDED_REFERENCE_ID}
+        reference_texts = {example.original for example in examples}
+        candidates = [chunk for chunk in chunks if chunk.original not in reference_texts]
+        chunks = stratified_sample(
+            candidates, count=args.limit, seed=args.seed, excluded_ids=excluded_ids
+        )
+    metadata = run_metadata(args, chunks, examples)
+    if args.limit and not args.preview_reference:
+        selected_ids = {chunk.id for chunk in chunks}
+        for chunk in load_chunks(args.chunks):
+            if chunk.id not in selected_ids:
+                reason = "stratified_random_not_selected"
+                if chunk.id in excluded_ids or chunk.original in reference_texts:
+                    reason = "few_shot_or_anomalous_reference_excluded_from_preview"
+                metadata.exclusions.append(Exclusion(id=chunk.id, reason=reason))
 
     generator = OpenAICompatibleGenerator(
         api_key=api_key,
@@ -562,7 +813,10 @@ def main() -> int:
         concurrency=args.concurrency,
         retries=args.retries,
         seed=args.seed,
-        examples=load_style_examples(args.style_reference) if args.style_reference else None,
+        examples=examples,
+        metadata=metadata,
+        references=references,
+        provider_metadata=generator.response_metadata,
     )
     return 0 if not report.failed else 1
 

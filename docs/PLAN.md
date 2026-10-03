@@ -41,7 +41,7 @@
 - 繁体清洗有单测，且断言引号**未**被改动
 - `vernacularize.py` 中断后重启只处理 remaining（写一条集成测试，用 Fake LLM）
 - 白话版字数落在原文的 0.9–1.3 倍区间，越界的 chunk 被记录在 `corpus/rebuild_report.json`
-- **对 `salvaged_pairs.jsonl` 里 14 条完整样本的同名 chunk 重跑，人工比对新旧两版**，新版的人名/数字/对话不得有缺失
+- **对 `salvaged_pairs.jsonl` 剔除 `妇女生活_0015` 后的 13 条执行严格留一法重跑**，人工比对新旧两版，新版的人名/数字/对话不得有缺失；预览分层随机抽 20 条，均值区间与停止条件按 SPEC 1.5
 - `corpus/split.json` 已提交，`corpus/pairs.jsonl` 未被提交
 
 ### T0.1 `[CPU]` 仓库骨架

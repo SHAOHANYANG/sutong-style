@@ -1,0 +1,4 @@
+范例 {index} 原文：
+{original}
+范例 {index} 白话：
+{vernacular}

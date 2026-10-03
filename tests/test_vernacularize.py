@@ -33,7 +33,7 @@ def test_few_shot_rotation_is_reproducible_and_excludes_target() -> None:
 
     assert len(first) == 3
     assert len(second) == 2
-    assert not {example.id for example in first} & {example.id for example in second}
+    assert [example.id for example in first] != [example.id for example in second]
     assert all(example.id != "0" for example in first + second)
     assert first == select_style_examples(examples, chunk_id="0", attempt=1, seed=42)
 
