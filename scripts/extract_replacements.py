@@ -136,7 +136,9 @@ def extract_lexicon(paths: list[Path]) -> ReplacementLexicon:
 
 
 def main() -> None:
-    structlog.configure(processors=[structlog.processors.JSONRenderer(ensure_ascii=False)])
+    # ASCII JSON transport is safe under both UTF-8 and legacy Windows consoles.
+    # Consumers decode escapes and save the resulting asset with encoding="utf-8".
+    structlog.configure(processors=[structlog.processors.JSONRenderer(ensure_ascii=True)])
     lexicon = extract_lexicon(list(Path("corpus/raw").glob("*.txt")))
     structlog.get_logger().info("replacement_lexicon", lexicon=lexicon.model_dump())
 

@@ -1,11 +1,13 @@
 """Synthetic-only tests for the frozen T0.0 experiment, never calling a service."""
 
+import json
 from pathlib import Path
 
 import pytest
 
 from scripts.chunk_corpus import CorpusChunk
 from scripts.extract_replacements import ReplacementLexicon, classify_term, extract_lexicon
+from scripts.extract_replacements import main as export_replacements
 from scripts.rebuild_metrics import final_failures, measure, numeric_values, pinc, source_bleu
 from scripts.rebuild_reporting import AttemptRecord, RunMetadata, SamplingParameters
 from scripts.two_pass_preview import StageArtifact, metric_summary, run_experiment
@@ -20,7 +22,24 @@ def test_committed_lexicon_encoding_and_synthetic_reproducibility() -> None:
     assert len(lexicon.terms) == 96
     assert all("\ufffd" not in path for path in lexicon.source_sha256)
     assert len(lexicon.source_sha256) == 3
-    assert {row.term for row in lexicon.terms} >= {"蓦然", "绯红"}
+    assert {row.term for row in lexicon.terms} >= {"仿佛", "绯红"}
+
+
+def test_replacement_export_is_ascii_json_with_lossless_chinese(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    raw_path = tmp_path / "corpus" / "raw"
+    raw_path.mkdir(parents=True)
+    (raw_path / "自编样例.txt").write_text("蓦然绯红。蓦然绯红。", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    export_replacements()
+    exported = capsys.readouterr().out
+    assert exported.isascii()
+    for encoding in ("utf-8", "cp936"):
+        transported = exported.encode(encoding).decode(encoding)
+        lexicon = ReplacementLexicon.model_validate(json.loads(transported)["lexicon"])
+        assert {row.term for row in lexicon.terms} >= {"蓦然", "绯红"}
+        assert list(lexicon.source_sha256) == [str(Path("corpus/raw/自编样例.txt"))]
 
 
 def test_pinc_candidate_direction_repetitions_and_preprocessing() -> None:
