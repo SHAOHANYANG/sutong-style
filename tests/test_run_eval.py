@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from eval.run_eval import build_judge_completer, evaluate, load_config, main
+from eval.run_eval import AGGREGATE_FIELDS, build_judge_completer, evaluate, load_config, main
 from tests.fakes import FakeGenerator
 from tests.test_judge import AlwaysA
 
@@ -70,19 +70,13 @@ def test_skip_judge_makes_no_network_request_and_writes_six_fields(
         ]
     )
     payload = json.loads(report_path.read_text(encoding="utf-8"))
-    assert set(payload["aggregate"]) == {
-        "style_distance",
-        "entity_recall",
-        "numeral_recall",
-        "hallucination_rate",
-        "style_win_rate",
-        "ppl",
-    }
+    assert list(payload["aggregate"]) == list(AGGREGATE_FIELDS)
     assert payload["n_cases"] == 5
     assert len(payload["per_case"]) == 5
     assert payload["aggregate"]["style_win_rate"] is None
     assert payload["distribution"]["style_win_rate"] is None
     assert payload["aggregate"]["ppl"] is None
+    assert payload["aggregate"]["copy_ratio"] == 1.0
     assert payload["model"] == "fake"
     for name in ("style_distance", "entity_recall", "numeral_recall", "hallucination_rate"):
         assert isinstance(payload["aggregate"][name], float)

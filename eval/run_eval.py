@@ -37,6 +37,7 @@ AGGREGATE_FIELDS = (
     "numeral_recall",
     "hallucination_rate",
     "style_win_rate",
+    "copy_ratio",
     "ppl",
 )
 
@@ -240,21 +241,24 @@ def evaluate(
         )
 
     win_rate = style_win_rate(outcomes) if outcomes else None
-    aggregate: dict[str, float | None] = {
+    copy_summary = summarize(copy_ratios)
+    measured: dict[str, float | None] = {
         "style_distance": summarize(distances)["mean"],
         "entity_recall": summarize(entities)["mean"],
         "numeral_recall": summarize(numerals)["mean"],
         "hallucination_rate": summarize(hallucinations)["mean"],
         "style_win_rate": win_rate,
+        "copy_ratio": copy_summary["mean"],
         "ppl": None,
     }
+    aggregate = {name: measured[name] for name in AGGREGATE_FIELDS}
     distribution: dict[str, dict[str, float | int] | None] = {
         "style_distance": summarize(distances),
         "entity_recall": summarize(entities),
         "numeral_recall": summarize(numerals),
         "hallucination_rate": summarize(hallucinations),
         "style_win_rate": vote_tally(outcomes) if outcomes else None,
-        "copy_ratio": summarize(copy_ratios),
+        "copy_ratio": copy_summary,
         "ppl": None,
     }
     models = {generations[case.id].model for case in cases}
