@@ -1,0 +1,10 @@
+pipeline: baseline
+model: fake
+seed: 42
+cases: corpus/sample_public.jsonl
+style_reference: stylometry/data/style_reference.json
+lexicon: stylometry/data/lexicon.json
+gazetteer: corpus/gazetteer.json
+judge_model: deepseek-v4-pro
+judge_prompt: eval/prompts/pairwise_judge.txt
+opponent: vernacular

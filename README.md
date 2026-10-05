@@ -17,7 +17,7 @@
 | + 风格范例检索 | — | — | — | — | — |
 | + 自检重写环 | — | — | — | — | — |
 
-指标定义见 [SPEC 3.1](docs/SPEC.md#31-指标清单)。
+指标定义见 [SPEC 3.1](docs/SPEC.md#31-指标清单)。填写 `style_win_rate` 时必须同时标注 `tie_rate`。`tie_rate` 接近 1 表示评委判不动，该轮胜率不可引用，定义见 [SPEC 3.3](docs/SPEC.md#33-风格胜率llm-judge)。
 
 ## 做了什么
 

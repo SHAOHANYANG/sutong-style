@@ -8,6 +8,7 @@ requires-python = ">=3.11,<3.12"
 [dependency-groups]
 core = [
     "cn2an>=0.5.24",
+    "pyyaml>=6.0.3",
     "jieba>=0.42.1",
     "numpy>=2.1",
     "openai>=1.51",
@@ -55,6 +56,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["cn2an", "cn2an.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["yaml", "yaml.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

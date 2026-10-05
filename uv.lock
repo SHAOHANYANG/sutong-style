@@ -2793,6 +2793,7 @@ core = [
     { name = "openai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "sacrebleu" },
     { name = "structlog" },
 ]
@@ -2818,6 +2819,7 @@ core = [
     { name = "openai", specifier = ">=1.51" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "sacrebleu", specifier = ">=2.6.0" },
     { name = "structlog", specifier = ">=24.4" },
 ]

@@ -4,6 +4,16 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-05 EDT T0.4 评估编排
+
+`eval/judge.py` 做配对比较：每个样本 A/B 互换各问一次，两次不一致记平局。
+胜率是 `(胜 + 0.5 × 平) / 样本数`。磁盘缓存键是 prompt 与模型名的 sha256，只存 A/B。
+`eval/run_eval.py` 读 `eval/configs/baseline.yaml` 和生成文件。`--skip-judge` 不构造客户端。
+本任务没有基线数字：5 条 `sample_public.jsonl` 用 Fake generator 跑通，困惑度和风格胜率在跳过评委时为 null。
+词频阈值 200 的地名代价已由所有者量化，结论补进 Q17，不再调整。未开始 T0.5。
+
+**同日验收后两处修正。** 评委默认模型改为 `deepseek-v4-pro`。`deepseek-chat` 已重映射到 Flash，SPEC 3.3 的旧默认和 SPEC 1.5 的禁令冲突。请求名与响应 model 不一致时 `ModelIdentityMismatchError` 对 judge 同样抛错。报告的 `distribution.style_win_rate` 改为胜、负、平、tie_rate 和 n。永远选 A 的评委胜率仍是 0.5，但 tie_rate 为 1，用来区分评委失效和真打平。仍未开始 T0.5。
+
 ## 2026-10-05 EDT 风格参照与词表口径
 
 词表只用 train 743 对，风格参照用全部 915 条原文。所有者核对过这不是疏漏：
