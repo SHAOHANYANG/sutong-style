@@ -11,6 +11,15 @@
 逐条最大差 0.0491，相对变化 0.59%。词表仍必须 train-only，因为它进入特征。记在 SPEC 2.3。
 不改拟合代码。
 
+## 2026-10-05 EDT T0.3 保真指标
+
+`eval/metrics.py` 实现 entity_recall、numeral_recall、hallucination_rate，空输入集和空输出按 SPEC 3.2。
+数值不另写归一化，直接用白话化闸门的 `extract_quantities`。四条实测 bug 都有单测：万人大军对十万铁骑
+recall 小于 1，太医对宫监产生 title violation，垂死的酸气对死尸散发的酸臭之气不崩，三辆对全角３辆
+归一化后 recall 为 1。cn2an 覆盖十万、万、三月初九、四斤、二十、一百二十。
+专名表从 train 743 条原文抽出 274 个词，eval 59 条未参与，最长 4 字。不装 LAC，实体通道是
+jieba 专名加词表，原因在 Q17。`pytest --cov=eval` 覆盖率 100%。未开始 T0.4。
+
 ## 2026-10-05 EDT 数值闸门停改（验收后）
 
 802 条 pairs、eval 59/73、备份哈希与 `split.json` 未重切，均已核对。序数单独成类保留。
