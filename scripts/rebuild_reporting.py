@@ -63,6 +63,7 @@ class RunMetadata(BaseModel):
     example_pool_ids: list[str]
     source_sha256: dict[str, str]
     exclusions: list[Exclusion]
+    gate: str = "historical"
     snapshot_limitation: str = "Hosted alias may not expose an immutable model snapshot."
 
 
@@ -85,6 +86,13 @@ class AttemptRecord(BaseModel):
     length_ratio: float | None = None
     accepted: bool = False
     reasons: list[str] = Field(default_factory=list)
+    pinc1: float | None = None
+    pinc2: float | None = None
+    pinc3: float | None = None
+    pinc4: float | None = None
+    pinc6: float | None = None
+    sbleu: float | None = None
+    observed_name_gaps: list[str] = Field(default_factory=list)
     numerical_waivers: list[str] = Field(default_factory=list)
     numerical_waiver_reason: str = "grammatical_one_classifier_exemption_per_QUESTIONS_Q6"
     original: str = Field(default="", exclude=True)

@@ -1,7 +1,11 @@
 from pathlib import Path
 
+import pytest
+
 from scripts.chunk_corpus import CorpusChunk
+from scripts.rebuild_reporting import AttemptRecord
 from scripts.vernacularize import (
+    CONTENT_GATE,
     Pair,
     VernacularExample,
     copy_similarity_limit,
@@ -11,9 +15,11 @@ from scripts.vernacularize import (
     numeric_phrases,
     paragraph_count,
     proper_noun_density,
+    protected_terms_missing,
     run_batch,
     select_style_examples,
     text_similarity,
+    verify_pro_control_prompt,
 )
 from tests.fakes import FakeGenerator
 
@@ -194,3 +200,78 @@ def test_numeral_guard_allows_new_phrases_but_not_changed_input_values() -> None
     assert numerals_preserved("桌上放着一个杯子", "桌上放着个杯子")
     assert not numerals_preserved("万人大军", "上万人组成的大军")
     assert numerals_preserved("近百名来客", "将近一百人来了")
+
+
+def test_content_gate_keeps_reviewed_terms_and_records_surface_metrics() -> None:
+    assert "颂莲" in CONTENT_GATE.hard_terms
+    assert "枫杨树" in CONTENT_GATE.observe_only
+    assert protected_terms_missing("颂莲来了", "她来了") == ["颂莲"]
+
+    class KeepingGenerator:
+        def generate(self, prompt: str, **kwargs: object) -> str:
+            return "颂莲带着三百元走了。"
+
+    records: list[AttemptRecord] = []
+    chunk = CorpusChunk(id="测试_0001", work="测试", idx=1, original="颂莲带着三百元。枫杨树很远。")
+    pair, issues = generate_pair(
+        chunk,
+        {},
+        KeepingGenerator(),
+        retries=0,
+        seed=42,
+        gate="content",
+        records=records,
+    )
+    assert pair is not None and issues == []
+    assert records[0].reasons == []
+    assert records[0].observed_name_gaps == ["枫杨树"]
+    assert records[0].pinc4 is not None
+
+
+def test_content_gate_rejects_missing_title_or_numeral_without_retry(tmp_path: Path) -> None:
+    class DroppingGenerator:
+        def generate(self, prompt: str, **kwargs: object) -> str:
+            return "她带着两百元走了，一句情节都没留。"
+
+    chunk = CorpusChunk(id="测试_0002", work="测试", idx=2, original="二太太带着三百元出门。")
+    fake = DroppingGenerator()
+    result = run_batch(
+        [chunk],
+        tmp_path / "pairs.jsonl",
+        tmp_path / "report.json",
+        {},
+        fake,
+        retries=0,
+        gate="content",
+    )
+    assert result.succeeded == 0
+    assert result.failed == ["测试_0002"]
+    assert result.per_case[0].pinc4 is not None
+    assert "protected_term_missing" in result.per_case[0].reasons
+    assert "numeral_mismatch" in result.per_case[0].reasons
+    assert "pinc4_below_limit" not in result.per_case[0].reasons
+    assert not (tmp_path / "pairs.jsonl").exists()
+
+
+def test_content_resume_skips_ids_already_archived(tmp_path: Path) -> None:
+    chunk = CorpusChunk(id="测试_0003", work="测试", idx=3, original="颂莲来了。")
+    report = tmp_path / "report.json"
+    artifacts = report.with_suffix(".attempts.jsonl")
+    artifacts.write_text(
+        '{"record":{"id":"测试_0003","work":"测试","attempt":1,"called_at_utc":"t",'
+        '"seed":1,"eligible_example_ids":[],"selected_example_ids":[],'
+        '"prompt_sha256":"x","similarity_limit":0.65,"dialogue_density":0,'
+        '"proper_noun_density":0},"original":"颂莲来了。","prompt":"p","output":"颂莲来了。"}\n',
+        encoding="utf-8",
+    )
+    fake = FakeGenerator()
+    result = run_batch([chunk], tmp_path / "pairs.jsonl", report, {}, fake, gate="content")
+    assert fake.calls == []
+    assert result.succeeded == 0
+
+
+def test_one_pro_control_prompt_matches_saved_archive() -> None:
+    archive = Path("corpus/rebuild_report_model_control_20261003.json")
+    if not archive.exists():
+        pytest.skip("local pro_control archive is not in the checkout")
+    verify_pro_control_prompt()

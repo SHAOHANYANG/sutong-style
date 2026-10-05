@@ -16,7 +16,7 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Literal, Protocol
 from urllib.parse import urlsplit
 
 import jieba.posseg as pseg
@@ -107,6 +107,7 @@ class AttemptIssue(BaseModel):
     proper_noun_density: float | None = None
     expected_numerals: list[str] | None = None
     actual_numerals: list[str] | None = None
+    missing_terms: list[str] | None = None
 
 
 class RebuildReport(BaseModel):
@@ -127,9 +128,24 @@ class RebuildReport(BaseModel):
     old_vs_new_distribution: DistributionReport | None = None
     reference_distribution: Distribution | None = None
     artifacts_path: str | None = None
+    content_metrics: dict[str, Distribution] = Field(default_factory=dict)
+    content_metrics_by_work: dict[str, dict[str, Distribution]] = Field(default_factory=dict)
 
 
+class ContentGateTerms(BaseModel):
+    """Closed protection list for the full-run content gate."""
+
+    version: str
+    source: str
+    hard_terms: list[str]
+    observe_only: list[str]
+
+
+CONTENT_GATE_PATH = Path(__file__).parent / "data" / "content_gate_terms.json"
+CONTENT_GATE = ContentGateTerms.model_validate_json(CONTENT_GATE_PATH.read_text(encoding="utf-8"))
 PROMPT_TEMPLATE = (PROMPT_DIR / "vernacularize_a.txt").read_text(encoding="utf-8")
+PRO_CONTROL_PROMPT_SHA256 = "38fd364e91c12cf46828e1d5669e80b23e51398536d2364b375b238046afe506"
+SURFACE_METRICS = ("pinc1", "pinc2", "pinc3", "pinc4", "pinc6", "sbleu")
 
 
 def numeric_phrases(text: str) -> Counter[str]:
@@ -160,6 +176,49 @@ def numeric_facts(text: str) -> set[str]:
 def numerals_preserved(original: str, vernacular: str) -> bool:
     """Require every input quantity phrase without rejecting harmless new phrases."""
     return numeric_facts(original).issubset(numeric_facts(vernacular))
+
+
+def protected_terms_missing(original: str, vernacular: str) -> list[str]:
+    """Return reviewed names and titles present in the source but absent from the output."""
+    return [term for term in CONTENT_GATE.hard_terms if term in original and term not in vernacular]
+
+
+def observed_name_gaps(original: str, vernacular: str) -> list[str]:
+    """Context-sensitive or single-character terms are recorded and do not block."""
+    return [
+        term for term in CONTENT_GATE.observe_only if term in original and term not in vernacular
+    ]
+
+
+def record_surface_metrics(record: AttemptRecord, original: str, vernacular: str) -> None:
+    """Store PINC and sBLEU without using them as acceptance gates."""
+    from scripts.rebuild_metrics import pinc, source_bleu
+
+    record.pinc1 = pinc(original, vernacular, 1)
+    record.pinc2 = pinc(original, vernacular, 2)
+    record.pinc3 = pinc(original, vernacular, 3)
+    record.pinc4 = pinc(original, vernacular, 4)
+    record.pinc6 = pinc(original, vernacular, 6)
+    record.sbleu = source_bleu(original, vernacular)
+
+
+def surface_metric_summary(
+    records: list[AttemptRecord],
+) -> tuple[dict[str, Distribution], dict[str, dict[str, Distribution]]]:
+    """Overall and per-work distributions for recorded, non-blocking surface metrics."""
+    overall: dict[str, Distribution] = {}
+    by_work: dict[str, dict[str, Distribution]] = {}
+    for key in SURFACE_METRICS:
+        values = [float(value) for row in records if (value := getattr(row, key)) is not None]
+        overall[key] = describe(values)
+        for work in sorted({row.work for row in records}):
+            group = [
+                float(value)
+                for row in records
+                if row.work == work and (value := getattr(row, key)) is not None
+            ]
+            by_work.setdefault(work, {})[key] = describe(group)
+    return overall, by_work
 
 
 def build_prompt(
@@ -280,6 +339,7 @@ def generate_pair(
     reference: VernacularExample | None = None,
     round_number: int = 1,
     provider_metadata: Callable[[], ProviderMetadata] | None = None,
+    gate: Literal["historical", "content"] = "historical",
 ) -> tuple[Pair | None, list[AttemptIssue]]:
     """Keep every candidate's measurements, including all rejection reasons."""
     issues: list[AttemptIssue] = []
@@ -349,6 +409,44 @@ def generate_pair(
             )
             if record.provider.finish_reason == "length":
                 record.reasons.append("provider_output_truncated")
+            if gate == "content":
+                record_surface_metrics(record, chunk.original, vernacular)
+                missing = protected_terms_missing(chunk.original, vernacular)
+                record.observed_name_gaps = observed_name_gaps(chunk.original, vernacular)
+                if missing:
+                    record.reasons.append("protected_term_missing")
+                if not numerals_preserved(chunk.original, vernacular):
+                    record.reasons.append("numeral_mismatch")
+                record.accepted = not record.reasons
+                if records is not None:
+                    records.append(record)
+                if record.accepted:
+                    return Pair(
+                        id=chunk.id,
+                        work=chunk.work,
+                        idx=chunk.idx,
+                        vernacular=vernacular,
+                        original=chunk.original,
+                        split=split_by_id.get(chunk.id, "train"),
+                    ), issues
+                for reason in record.reasons:
+                    issues.append(
+                        AttemptIssue(
+                            id=chunk.id,
+                            attempt=attempt,
+                            reason=reason,
+                            length_ratio=record.length_ratio,
+                            similarity=record.similarity,
+                            missing_terms=missing if reason == "protected_term_missing" else None,
+                            expected_numerals=sorted(numeric_facts(chunk.original))
+                            if reason == "numeral_mismatch"
+                            else None,
+                            actual_numerals=sorted(numeric_facts(vernacular))
+                            if reason == "numeral_mismatch"
+                            else None,
+                        )
+                    )
+                return None, issues
             if not MIN_RATIO <= record.length_ratio <= MAX_RATIO:
                 record.reasons.append("length_out_of_range")
             if paragraph_count(vernacular) != paragraph_count(chunk.original):
@@ -437,6 +535,18 @@ def load_completed(path: Path) -> set[str]:
         return {Pair.model_validate_json(line).id for line in handle if line.strip()}
 
 
+def load_attempted_ids(path: Path) -> set[str]:
+    """Ids already sent to the provider, including content-gate failures."""
+    if not path.exists():
+        return set()
+    found: set[str] = set()
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                found.add(str(json.loads(line)["record"]["id"]))
+    return found
+
+
 def load_split(path: Path) -> dict[str, str]:
     split = CorpusSplit.model_validate_json(path.read_text(encoding="utf-8"))
     return {**dict.fromkeys(split.train, "train"), **dict.fromkeys(split.eval, "eval")}
@@ -520,10 +630,17 @@ def run_batch(
     metadata: RunMetadata | None = None,
     references: list[VernacularExample] | None = None,
     provider_metadata: Callable[[], ProviderMetadata] | None = None,
+    gate: Literal["historical", "content"] = "historical",
 ) -> RebuildReport:
     """Run a resumable batch; retain rejected outputs without filtering distributions."""
+    artifacts_path = Path("corpus/generations") / (report_path.stem + "_attempts.jsonl")
+    if metadata is None:
+        artifacts_path = report_path.with_suffix(".attempts.jsonl")
     completed = load_completed(output)
-    remaining = [chunk for chunk in chunks if chunk.id not in completed]
+    attempted = load_attempted_ids(artifacts_path) if gate == "content" else set()
+    remaining = [
+        chunk for chunk in chunks if chunk.id not in completed and chunk.id not in attempted
+    ]
     LOGGER.info(
         "vernacularize_start",
         total=len(chunks),
@@ -547,9 +664,6 @@ def run_batch(
             ]
             if len(eligible) != 12:
                 raise ValueError("每个留一 fold 必须恰好有 12 条候选范例")
-    artifacts_path = Path("corpus/generations") / (report_path.stem + "_attempts.jsonl")
-    if metadata is None:
-        artifacts_path = report_path.with_suffix(".attempts.jsonl")
     report_path.parent.mkdir(parents=True, exist_ok=True)
     initial = RebuildReport(
         status="in_progress",
@@ -587,6 +701,7 @@ def run_batch(
                 reference=reference_by_id.get(chunk.id),
                 round_number=metadata.round if metadata else 1,
                 provider_metadata=provider_metadata,
+                gate=gate,
             )
         except ModelIdentityMismatchError:
             aborted.set()
@@ -649,8 +764,8 @@ def run_batch(
             if processed % 20 == 0 or processed == len(remaining):
                 LOGGER.info(
                     "vernacularize_progress",
-                    progress=f"{processed}/{len(remaining)}",
-                    ok=succeeded,
+                    progress=f"{len(completed) + len(attempted) + processed}/{len(chunks)}",
+                    ok=len(completed) + succeeded,
                     failed=len(failed),
                 )
     # Resume does not masquerade previously produced pairs as new external calls.
@@ -662,6 +777,10 @@ def run_batch(
             if chunk.id in completed
         )
     last_records.sort(key=lambda record: record.id)
+    content_overall: dict[str, Distribution] = {}
+    content_by_work: dict[str, dict[str, Distribution]] = {}
+    if gate == "content":
+        content_overall, content_by_work = surface_metric_summary(last_records)
     report = RebuildReport(
         status="aborted_model_mismatch" if aborted.is_set() else "complete",
         total_requested=len(chunks),
@@ -691,6 +810,8 @@ def run_batch(
         if references
         else None,
         artifacts_path=str(artifacts_path),
+        content_metrics=content_overall,
+        content_metrics_by_work=content_by_work,
     )
     report_path.write_text(
         json.dumps(report.model_dump(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -777,7 +898,10 @@ def run_metadata(
         if args.preview_reference
         else "stratified_preview"
         if args.limit
+        else "full_rebuild_pro_control"
+        if args.gate == "content"
         else "full_rebuild",
+        gate=args.gate,
         round=args.round,
         retries=args.retries,
         concurrency=args.concurrency,
@@ -813,17 +937,100 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--thinking-mode", choices=["enabled", "disabled"], default="disabled")
     parser.add_argument("--allow-full", action="store_true", help="仅在人工明确放行全量之后使用")
+    parser.add_argument("--gate", choices=["historical", "content"], default="historical")
+    parser.add_argument(
+        "--self-check",
+        action="store_true",
+        help="核对一条展开 prompt 与 pro_control 档案一致，不调用 API",
+    )
     return parser.parse_args()
+
+
+def prompt_template_sha256() -> str:
+    files = sorted(PROMPT_DIR.glob("*.txt"))
+    return hashlib.sha256(b"".join(path.read_bytes() for path in files)).hexdigest()
+
+
+def verify_pro_control_prompt(case_id: str = "另一种妇女生活_0018") -> None:
+    """Confirm one expanded prompt, seed, and examples match the saved Pro control."""
+    report_path = Path("corpus/rebuild_report_model_control_20261003.json")
+    artifacts_path = Path("corpus/generations/rebuild_report_model_control_20261003_attempts.jsonl")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    metadata = report["metadata"]
+    sampling = metadata["sampling"]
+    if (
+        metadata["model"] != "deepseek-v4-pro"
+        or metadata["round"] != 2
+        or metadata["retries"] != 0
+        or sampling["temperature"] != 0.2
+        or sampling["top_p"] != 1.0
+        or sampling["max_tokens"] != 2048
+        or sampling["thinking_mode"] != "disabled"
+        or sampling["seed"] != 42
+        or prompt_template_sha256() != metadata["prompt_sha256"]
+        or metadata["prompt_sha256"] != PRO_CONTROL_PROMPT_SHA256
+    ):
+        raise ValueError("Pro control template or sampling no longer matches the saved report")
+    chunks = {chunk.id: chunk for chunk in load_chunks(Path("corpus/chunks.jsonl"))}
+    examples = load_style_examples(Path("corpus/salvaged_pairs.jsonl"))
+    chunk = chunks[case_id]
+    eligible = [
+        example
+        for example in examples
+        if example.id != chunk.id and example.original != chunk.original
+    ]
+    selected = select_style_examples(
+        eligible, chunk_id=chunk.id, attempt=metadata["round"], seed=sampling["seed"]
+    )
+    prompt = build_prompt(chunk.original, selected)
+    expected_seed = sampling["seed"] + chunk.idx + 1 + (metadata["round"] - 1) * 100_000
+    for line in artifacts_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if row["record"]["id"] != case_id:
+            continue
+        if row["record"]["prompt_sha256"] != hashlib.sha256(prompt.encode("utf-8")).hexdigest():
+            raise ValueError("Expanded prompt hash differs from the Pro control archive")
+        if row["prompt"] != prompt:
+            raise ValueError("Expanded prompt text differs from the Pro control archive")
+        if row["record"]["seed"] != expected_seed:
+            raise ValueError("Per-case seed differs from the Pro control archive")
+        if row["record"]["selected_example_ids"] != [example.id for example in selected]:
+            raise ValueError("Few-shot ids differ from the Pro control archive")
+        LOGGER.info("pro_control_self_check", id=case_id, seed=expected_seed, examples=2)
+        return
+    raise ValueError(f"Pro control archive has no case {case_id}")
 
 
 def main() -> int:
     args = parse_args()
+    if args.self_check:
+        structlog.configure(processors=[structlog.processors.JSONRenderer(ensure_ascii=False)])
+        verify_pro_control_prompt()
+        return 0
+    if args.gate == "content" and (
+        args.retries != 0
+        or args.round != 2
+        or args.temperature != 0.2
+        or args.top_p != 1.0
+        or args.max_tokens != 2048
+        or args.thinking_mode != "disabled"
+        or args.seed != 42
+        or args.style_reference is None
+    ):
+        raise ValueError("Content-gate full run must keep the Pro control prompt and sampling")
     if not args.limit and not args.preview_reference and not args.allow_full:
         LOGGER.error("full_run_requires_explicit_release")
         return 1
     if args.retries < 0:
         raise ValueError("retries 不得为负数")
     load_dotenv()
+    if args.gate == "content" and (
+        os.environ.get("VERNACULARIZE_MODEL", "deepseek-v4-pro") != "deepseek-v4-pro"
+        or urlsplit(os.environ.get("LLM_BASE_URL", "")).hostname != "api.deepseek.com"
+    ):
+        raise ValueError("Content-gate run requires deepseek-v4-pro at api.deepseek.com")
     api_key = os.environ.get("LLM_API_KEY")
     if not api_key:
         LOGGER.error("missing_environment", variable="LLM_API_KEY")
@@ -877,6 +1084,7 @@ def main() -> int:
         metadata=metadata,
         references=references,
         provider_metadata=generator.response_metadata,
+        gate=args.gate,
     )
     return 0 if not report.failed else 1
 
