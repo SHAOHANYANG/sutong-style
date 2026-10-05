@@ -14,11 +14,14 @@ import threading
 from collections import Counter
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal, Protocol
 from urllib.parse import urlsplit
 
+import cn2an
 import jieba.posseg as pseg
 import structlog
 from dotenv import load_dotenv
@@ -63,11 +66,35 @@ NUMERAL_PHRASE = re.compile(
     r"张|页|本|封|桌|场|杯|碗|盘)"
 )
 WIDTH_TRANSLATION = str.maketrans("０１２３４５６７８９", "0123456789")
-NUMERAL_VALUE = re.compile(
-    r"^(?P<modifier>差不多|将近|第|初|近|约|上)?"
+QUANTITY = re.compile(
+    r"(?P<prefix>好几|将近|差不多|近|约|上)?"
+    r"(?P<marker>第|初)?"
     r"(?P<number>[0-9]+|[零〇一二两三四五六七八九十百千万亿]+)"
+    r"(?P<unit>公斤|公里|大洋|年|月|日|号|岁|个|位|名|人|口|只|条|件|家|间|所|匹|头|斤|两|克|"
+    r"里|亩|州|县|国|军|代|届|次|回|遍|天|夜|块|元|角|分|束|朵|颗|粒|枚|辆|艘|顶|把|柄|"
+    r"张|页|本|封|桌|场|杯|碗|盘)?"
 )
+APPROXIMATE_LABEL = {
+    "将近": "近",
+    "差不多": "约",
+    "近": "近",
+    "约": "约",
+    "上": "上",
+    "好几": "好几",
+}
+# 上百/上千/上万 are approximate magnitudes. 上一次/上一个 are "the previous", not "about one".
+SHANG_MAGNITUDE = set("百千万亿")
+GRAMMATICAL_UNITS = frozenset("个只口把件家间条位张片")
 GRAMMATICAL_ONE = re.compile(r"^一(?:个|只|口|把|件|家|间|条|位|张|片)$")
+# Digits inside these titles are ranks, not cardinal quantities.
+TITLE_ORDINALS = (
+    ("四太太", "4"),
+    ("三太太", "3"),
+    ("二太太", "2"),
+    ("四姨太", "4"),
+    ("三姨太", "3"),
+    ("二姨太", "2"),
+)
 
 
 class Generator(Protocol):
@@ -155,27 +182,98 @@ def numeric_phrases(text: str) -> Counter[str]:
     )
 
 
-def numeric_facts(text: str) -> set[str]:
-    """Normalize numeric values while ignoring interchangeable classifiers."""
-    facts: set[str] = set()
-    for phrase in numeric_phrases(text):
-        if GRAMMATICAL_ONE.fullmatch(phrase):
-            continue
-        match = NUMERAL_VALUE.match(phrase)
-        if not match:
-            continue
-        modifier = match.group("modifier") or ""
-        modifier = {"将近": "近", "差不多": "约"}.get(modifier, modifier)
+@dataclass(frozen=True)
+class QuantityProfile:
+    """Normalized quantities. Cardinals and ordinals are compared separately."""
+
+    cardinals: frozenset[str]
+    ordinals: frozenset[str]
+    unparsed: frozenset[str]
+
+
+def _normalize_number(number: str) -> str:
+    """Map Arabic or Chinese numerals onto one decimal string. Bare 万/百 become 10000/100."""
+    candidates = [number]
+    if number[0] in "十百千万亿":
+        candidates.append("一" + number)
+    error: Exception | None = None
+    for token in candidates:
+        try:
+            if re.fullmatch(r"[0-9]+", token):
+                value = Decimal(token)
+            else:
+                value = Decimal(str(cn2an.cn2an(token, "smart")))
+            return format(value.normalize(), "f")
+        except (ValueError, TypeError) as exc:
+            error = exc
+    raise ValueError("unparsed numeral") from error
+
+
+def _shang_is_approximate(number: str) -> bool:
+    """True when 上 attaches to a magnitude (上万) rather than to a small count (上一)."""
+    core = number
+    if len(core) > 1 and core[0] == "一" and core[1] in "十百千万亿":
+        core = core[1:]
+    return bool(core) and core[0] in SHANG_MAGNITUDE
+
+
+def extract_quantities(text: str) -> QuantityProfile:
+    """Extract values, not spellings. Titles and 第N stay out of the cardinal set."""
+    masked = text.translate(WIDTH_TRANSLATION)
+    ordinals: set[str] = set()
+    for title, rank in TITLE_ORDINALS:
+        if title in masked:
+            ordinals.add(rank)
+            masked = masked.replace(title, " " * len(title))
+    cardinals: set[str] = set()
+    unparsed: set[str] = set()
+    for match in QUANTITY.finditer(masked):
+        prefix = match.group("prefix")
+        marker = match.group("marker")
         number = match.group("number")
-        if len(number) > 1 and number[0] == "一" and number[1] in "十百千万":
-            number = number[1:]
-        facts.add(modifier + number)
-    return facts
+        unit = match.group("unit") or ""
+        if not unit and len(number) > 1 and number.endswith("两"):
+            number, unit = number[:-1], "两"
+        if prefix == "上" and marker is None and not _shang_is_approximate(number):
+            continue
+        # A unit, an ordinal/date marker, or an approximate prefix is required.
+        # Bare 一/零零 would otherwise match inside ordinary words.
+        if not unit and marker is None and prefix is None:
+            continue
+        if prefix is None and marker is None and number == "一" and unit in GRAMMATICAL_UNITS:
+            continue
+        try:
+            normalized = _normalize_number(number)
+        except ValueError:
+            unparsed.add(match.group(0))
+            continue
+        if marker == "第":
+            ordinals.add(normalized)
+            continue
+        label = APPROXIMATE_LABEL.get(prefix or "", "")
+        cardinals.add(f"{label}:{normalized}" if label else normalized)
+    return QuantityProfile(
+        cardinals=frozenset(cardinals),
+        ordinals=frozenset(ordinals),
+        unparsed=frozenset(unparsed),
+    )
+
+
+def numeric_facts(text: str) -> set[str]:
+    """Canonical quantity keys: values, ordinals as 第N, and unparsed source tokens."""
+    profile = extract_quantities(text)
+    return (
+        set(profile.cardinals) | {f"第{item}" for item in profile.ordinals} | set(profile.unparsed)
+    )
 
 
 def numerals_preserved(original: str, vernacular: str) -> bool:
-    """Require every input quantity phrase without rejecting harmless new phrases."""
-    return numeric_facts(original).issubset(numeric_facts(vernacular))
+    """Expected values must be a subset of actual values. Form and extra phrases do not fail."""
+    source = extract_quantities(original)
+    target = extract_quantities(vernacular)
+    if source.unparsed:
+        return False
+    return source.cardinals <= target.cardinals and source.ordinals <= target.ordinals
 
 
 def protected_terms_missing(original: str, vernacular: str) -> list[str]:

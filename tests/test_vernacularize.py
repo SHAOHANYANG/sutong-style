@@ -12,6 +12,7 @@ from scripts.vernacularize import (
     dialogue_density,
     generate_pair,
     numerals_preserved,
+    numeric_facts,
     numeric_phrases,
     paragraph_count,
     proper_noun_density,
@@ -200,6 +201,32 @@ def test_numeral_guard_allows_new_phrases_but_not_changed_input_values() -> None
     assert numerals_preserved("桌上放着一个杯子", "桌上放着个杯子")
     assert not numerals_preserved("万人大军", "上万人组成的大军")
     assert numerals_preserved("近百名来客", "将近一百人来了")
+    assert not numerals_preserved("万人大军", "十万铁骑")
+
+
+def test_numeral_gate_compares_values_not_spellings() -> None:
+    assert numerals_preserved("买了3本书", "买了三本书")
+    assert numeric_facts("买了3本书") == numeric_facts("买了三本书") == {"3"}
+    assert numerals_preserved("他16岁", "他十六岁")
+    assert numeric_facts("他16岁") == {"16"}
+    assert numerals_preserved("3次和一人", "一人，三次")
+    assert numerals_preserved("三个人", "三个人，还有一个杯子")
+
+
+def test_ordinals_magnitudes_dates_titles_and_grammatical_one() -> None:
+    assert numeric_facts("第一次") == {"第1"}
+    assert "1" not in numeric_facts("第一次")
+    assert numerals_preserved("第一次", "第1次")
+    assert not numerals_preserved("第一次", "一次")
+    assert numeric_facts("上万") == numeric_facts("上万人") == {"上:10000"}
+    assert numeric_facts("万人大军") == {"10000"}
+    assert numeric_facts("零零碎碎") == set()
+    assert numeric_facts("三月初九") == numeric_facts("3月9号") == {"3", "9"}
+    assert numerals_preserved("三月初九", "3月9号")
+    assert numeric_facts("四太太来了") == {"第4"}
+    assert "4" not in numeric_facts("四太太来了")
+    assert numeric_facts("一个杯子") == set()
+    assert numerals_preserved("桌上放着一个杯子", "桌上放着个杯子")
 
 
 def test_content_gate_keeps_reviewed_terms_and_records_surface_metrics() -> None:
