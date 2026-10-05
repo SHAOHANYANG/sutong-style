@@ -9,7 +9,7 @@ from tests.fakes import FakeGenerator
 from tests.test_judge import AlwaysA
 
 
-def _generations(path: Path) -> None:
+def _generations(path: Path, *, suffix: str = "") -> None:
     cases = [
         json.loads(line)
         for line in Path("corpus/sample_public.jsonl").read_text(encoding="utf-8").splitlines()
@@ -18,7 +18,7 @@ def _generations(path: Path) -> None:
     fake = FakeGenerator()
     lines = []
     for case in cases:
-        output = fake.generate(f"原文：\n{case['vernacular']}", seed=42)
+        output = fake.generate(f"原文：\n{case['vernacular']}", seed=42) + suffix
         lines.append(
             json.dumps(
                 {
@@ -95,22 +95,58 @@ def test_skip_judge_makes_no_network_request_and_writes_six_fields(
             "min",
             "max",
         }
+    assert set(payload["distribution"]["copy_ratio"]) == {
+        "mean",
+        "std",
+        "median",
+        "q1",
+        "q3",
+        "min",
+        "max",
+    }
+    assert payload["distribution"]["copy_ratio"]["mean"] == 1.0
     for case in payload["per_case"]:
         assert case["output_hash"].startswith("sha256:")
+        assert case["metrics"]["copy_ratio"] == 1.0
         assert "output" not in case
         assert "original" not in case
         assert "vernacular" not in case
     assert not (tmp_path / "cache").exists()
 
 
-def test_report_win_rate_stays_at_one_half_when_the_judge_always_picks_a(tmp_path: Path) -> None:
+def test_identical_output_skips_the_judge(tmp_path: Path) -> None:
     generations = tmp_path / "generations.jsonl"
     _generations(generations)
     judge = AlwaysA()
     report = evaluate(
         load_config(Path("eval/configs/baseline.yaml")),
         generations,
-        "always-a",
+        "identical",
+        skip_judge=False,
+        report_path=tmp_path / "report.json",
+        cache_dir=tmp_path / "cache",
+        completer=judge,
+    )
+    tally = report.distribution["style_win_rate"]
+    assert judge.calls == 0
+    assert tally is not None
+    assert tally["identical_rate"] == 1.0
+    assert tally["tie"] == 0
+    assert tally["n"] == 5
+    assert report.aggregate["style_win_rate"] == 0.5
+    copied = report.distribution["copy_ratio"]
+    assert copied is not None
+    assert copied["mean"] == 1.0
+
+
+def test_distinct_output_asks_twice_per_case(tmp_path: Path) -> None:
+    generations = tmp_path / "generations.jsonl"
+    _generations(generations, suffix="另写了一句。")
+    judge = AlwaysA()
+    report = evaluate(
+        load_config(Path("eval/configs/baseline.yaml")),
+        generations,
+        "distinct",
         skip_judge=False,
         report_path=tmp_path / "report.json",
         cache_dir=tmp_path / "cache",
@@ -118,13 +154,8 @@ def test_report_win_rate_stays_at_one_half_when_the_judge_always_picks_a(tmp_pat
     )
     tally = report.distribution["style_win_rate"]
     assert tally is not None
-    assert tally["tie_rate"] == 1.0
-    assert tally["win"] == 0
-    assert tally["loss"] == 0
-    assert tally["tie"] == 5
-    assert tally["n"] == 5
-    assert isinstance(tally["tie"], int)
-    assert report.aggregate["style_win_rate"] == 0.5
+    assert tally["identical_rate"] == 0.0
+    assert judge.calls == 2 * tally["n"]
 
 
 def test_missing_generation_is_reported(tmp_path: Path) -> None:

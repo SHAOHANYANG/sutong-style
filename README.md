@@ -17,7 +17,7 @@
 | + 风格范例检索 | — | — | — | — | — |
 | + 自检重写环 | — | — | — | — | — |
 
-指标定义见 [SPEC 3.1](docs/SPEC.md#31-指标清单)。填写 `style_win_rate` 时必须同时标注 `tie_rate`。`tie_rate` 接近 1 表示评委判不动，该轮胜率不可引用，定义见 [SPEC 3.3](docs/SPEC.md#33-风格胜率llm-judge)。
+指标定义见 [SPEC 3.1](docs/SPEC.md#31-指标清单)。填写 `style_win_rate` 时必须同时标注 `tie_rate` 和 `copy_ratio`。`tie_rate` 只在 `identical_rate` 低时才表示位置偏差；`copy_ratio` 高而 `tie_rate` 高是模型在抄，不是评委失效。定义见 [SPEC 3.3](docs/SPEC.md#33-风格胜率llm-judge)。
 
 ## 做了什么
 

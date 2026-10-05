@@ -14,6 +14,8 @@
 
 **同日验收后两处修正。** 评委默认模型改为 `deepseek-v4-pro`。`deepseek-chat` 已重映射到 Flash，SPEC 3.3 的旧默认和 SPEC 1.5 的禁令冲突。请求名与响应 model 不一致时 `ModelIdentityMismatchError` 对 judge 同样抛错。报告的 `distribution.style_win_rate` 改为胜、负、平、tie_rate 和 n。永远选 A 的评委胜率仍是 0.5，但 tie_rate 为 1，用来区分评委失效和真打平。仍未开始 T0.5。
 
+**同日再拆 identical。** 输出与白话逐字节相同时，互换后的 prompt 撞同一个缓存键，调用次数少一半，还被记成平局。现在这种情况不发请求，单独记 identical。`copy_ratio` 复用白话化的 `text_similarity`，跳过评委也计算。`tie_rate` 只在 identical 少时才解释成位置偏差。仍未开始 T0.5。
+
 ## 2026-10-05 EDT 风格参照与词表口径
 
 词表只用 train 743 对，风格参照用全部 915 条原文。所有者核对过这不是疏漏：

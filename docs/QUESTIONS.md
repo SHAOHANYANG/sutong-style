@@ -68,7 +68,7 @@ SPEC 3.2 写 LAC，并把 `numerals` 写成 `set[float]`。称谓只给了例子
 SPEC 3.3 要求把参照原文和两个候选一起交给评委，但没有写单条生成结果的对手是谁。
 
 **假设**
-对手是该条的白话输入，不是原文。原文只作参照。胜表示生成结果比白话更像参照的文风。每个样本仍互换 A/B 各问一次，两次不一致记平局。`style_win_rate = (胜 + 0.5 × 平) / 样本数`。开评委时 `distribution.style_win_rate` 记 win、loss、tie、tie_rate 和 n；`--skip-judge` 时该字段仍为 null，不构造客户端。评委模型默认 `deepseek-v4-pro`，不用已重映射到 Flash 的 `deepseek-chat`。困惑度本任务没有 GPU，报告里为 null。评委采样固定 temperature 0、top_p 1、max_tokens 16、seed 42、thinking disabled，prompt 全文在 `eval/prompts/pairwise_judge.txt`。
+对手是该条的白话输入，不是原文。原文只作参照。胜表示生成结果比白话更像参照的文风。每个样本仍互换 A/B 各问一次，两次不一致记平局。`style_win_rate = (胜 + 0.5 × 平) / 样本数`。开评委时 `distribution.style_win_rate` 记 win、loss、tie、identical、tie_rate、identical_rate 和 n。两个候选逐字节相同时不发请求，记 identical，不计入 tie。`--skip-judge` 时该字段仍为 null，不构造客户端。`copy_ratio` 不依赖评委。评委模型默认 `deepseek-v4-pro`，不用已重映射到 Flash 的 `deepseek-chat`。困惑度本任务没有 GPU，报告里为 null。评委采样固定 temperature 0、top_p 1、max_tokens 16、seed 42、thinking disabled，prompt 全文在 `eval/prompts/pairwise_judge.txt`。
 
 ## Q14 — 两表审核范围与称谓边界（2026-10-03 EDT / 2026-10-05 EDT，已确认）
 

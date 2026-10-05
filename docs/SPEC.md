@@ -559,7 +559,7 @@ hallucination_rate = |E_out \ E_in| / |E_out|       # E_out 为空时记 0.0
 - 输入 `(ground_truth_original, candidate_A, candidate_B)`，问哪个更像苏童
 - 每个 case 跑**两次，A/B 位置互换**。两次结论一致才计胜或负；不一致记平局
 - `style_win_rate = (胜 + 0.5 × 平) / 总数`
-- 平局就是两次位置互换的结论不一致。`distribution.style_win_rate` 记 `{"win": n, "loss": n, "tie": n, "tie_rate": f, "n": n}`，其中 `tie_rate = 平 / n`。`tie_rate` 是位置一致性诊断，不是质量指标。`tie_rate` 接近 1 说明评委判不动，这一轮的 `style_win_rate` 不可引用。`--skip-judge` 时该字段仍为 null。README 指标表填写 `style_win_rate` 时必须同时标注 `tie_rate`
+- 平局就是两次位置互换的结论不一致。两个候选逐字节相同时不发请求，记为 `identical`，不混进平局。`distribution.style_win_rate` 记 `{"win": n, "loss": n, "tie": n, "identical": n, "tie_rate": f, "identical_rate": f, "n": n}`。`tie_rate = 平 / n`，`identical_rate = identical / n`。`identical` 在 `style_win_rate` 里仍按 0.5 计入。`tie_rate` 是位置一致性诊断，不是质量指标；只在 `identical_rate` 低时才可解读为位置偏差。`copy_ratio` 是系统输出与白话输入的 SequenceMatcher 比值，复用白话化的 `text_similarity`，`--skip-judge` 时照常计算，写入 `per_case.metrics` 和 `distribution`。`copy_ratio` 高而 `tie_rate` 高，是模型在抄，不是评委失效。`--skip-judge` 时 `distribution.style_win_rate` 仍为 null。README 指标表填写 `style_win_rate` 时必须同时标注 `tie_rate` 和 `copy_ratio`
 - 凭据与白话化共用 `LLM_BASE_URL` / `LLM_API_KEY`，模型名单独走 `JUDGE_MODEL`（默认 `deepseek-v4-pro`）。不得使用已重映射到 Flash 的 `deepseek-chat`。两处模型可不同——judge 可以用更强的模型，白话化用更便宜的
 - `OpenAICompatibleGenerator` 的 `ModelIdentityMismatchError` 闸门对 judge 同样生效，请求名与响应 `model` 不一致即抛错，所以报告里的 `judge_model_used` 等价于响应模型标识。预注册第 4 条要求记录响应模型标识，judge 侧靠这道硬闸满足，不是漏记
 - **凭据只从环境变量或 `.env` 读，禁止硬编码。** `.env` 已在 `.gitignore` 中。任何 `.py` 文件里都不得出现 `sk-` 开头的字符串，T0.1 要加一条测试扫描全仓库断言这一点

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal, Protocol
 
 Choice = Literal["A", "B"]
-Outcome = Literal["win", "loss", "tie"]
+Outcome = Literal["win", "loss", "tie", "identical"]
 JUDGE_TEMPERATURE = 0.0
 JUDGE_TOP_P = 1.0
 JUDGE_MAX_TOKENS = 16
@@ -97,23 +97,40 @@ def outcome_of(first: Choice, second: Choice) -> Outcome:
     return "tie"
 
 
+def case_score(outcome: Outcome) -> float:
+    """A win scores 1, a loss scores 0. Ties and identical pairs both score one half."""
+    if outcome == "win":
+        return 1.0
+    if outcome == "loss":
+        return 0.0
+    return 0.5
+
+
 def style_win_rate(outcomes: Sequence[Outcome]) -> float:
-    """(wins + half the ties) / cases. An empty list is not a rate."""
+    """Mean case score. An empty list is not a rate."""
     if not outcomes:
         raise ValueError("没有可比的样本")
-    score = sum(1.0 if item == "win" else 0.5 if item == "tie" else 0.0 for item in outcomes)
-    return score / len(outcomes)
+    return sum(case_score(item) for item in outcomes) / len(outcomes)
 
 
 def vote_tally(outcomes: Sequence[Outcome]) -> dict[str, float | int]:
-    """Win, loss, and tie counts. tie_rate diagnoses position inconsistency."""
+    """Separate position ties from pairs that were the same text."""
     if not outcomes:
         raise ValueError("没有可比的样本")
     win = sum(item == "win" for item in outcomes)
     loss = sum(item == "loss" for item in outcomes)
     tie = sum(item == "tie" for item in outcomes)
+    identical = sum(item == "identical" for item in outcomes)
     n = len(outcomes)
-    return {"win": win, "loss": loss, "tie": tie, "tie_rate": tie / n, "n": n}
+    return {
+        "win": win,
+        "loss": loss,
+        "tie": tie,
+        "identical": identical,
+        "tie_rate": tie / n,
+        "identical_rate": identical / n,
+        "n": n,
+    }
 
 
 def compare_case(
@@ -125,7 +142,9 @@ def compare_case(
     system: str,
     opponent: str,
 ) -> Outcome:
-    """Ask twice. Agreement is a win or a loss; disagreement is a tie."""
+    """Ask twice. Identical candidates are not sent. Disagreement is a tie."""
+    if system == opponent:
+        return "identical"
     forward = cached_choice(
         completer,
         cache,

@@ -17,7 +17,16 @@ import yaml
 from pydantic import BaseModel, Field
 
 from eval.fidelity import assess
-from eval.judge import Completer, DiskCache, Outcome, compare_case, style_win_rate, vote_tally
+from eval.judge import (
+    Completer,
+    DiskCache,
+    Outcome,
+    case_score,
+    compare_case,
+    style_win_rate,
+    vote_tally,
+)
+from scripts.vernacularize import text_similarity
 from stylometry.distance import StyleReference
 from stylometry.lexicon import LiteraryLexicon
 
@@ -193,14 +202,15 @@ def evaluate(
     entities: list[float] = []
     numerals: list[float] = []
     hallucinations: list[float] = []
+    copy_ratios: list[float] = []
     outcomes: list[Outcome] = []
     for case in cases:
         generation = generations[case.id]
         report = assess(case.vernacular, generation.output, gazetteer)
         distance = reference.distance(generation.output)
+        copied = text_similarity(generation.output, case.vernacular)
         outcome: Outcome | None = None
         if judge is not None:
-            opponent = case.vernacular
             outcome = compare_case(
                 judge,
                 cache,
@@ -208,7 +218,7 @@ def evaluate(
                 model,
                 case.original,
                 generation.output,
-                opponent,
+                case.vernacular,
             )
             outcomes.append(outcome)
         metrics: dict[str, float | None] = {
@@ -216,10 +226,12 @@ def evaluate(
             "entity_recall": report.entity_recall,
             "numeral_recall": report.numeral_recall,
             "hallucination_rate": report.hallucination_rate,
-            "style_win_rate": {"win": 1.0, "loss": 0.0, "tie": 0.5}[outcome] if outcome else None,
+            "style_win_rate": case_score(outcome) if outcome else None,
+            "copy_ratio": copied,
             "ppl": None,
         }
         distances.append(distance)
+        copy_ratios.append(copied)
         entities.append(report.entity_recall)
         numerals.append(report.numeral_recall)
         hallucinations.append(report.hallucination_rate)
@@ -242,6 +254,7 @@ def evaluate(
         "numeral_recall": summarize(numerals),
         "hallucination_rate": summarize(hallucinations),
         "style_win_rate": vote_tally(outcomes) if outcomes else None,
+        "copy_ratio": summarize(copy_ratios),
         "ppl": None,
     }
     models = {generations[case.id].model for case in cases}
