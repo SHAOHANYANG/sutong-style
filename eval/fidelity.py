@@ -2,15 +2,54 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 from collections import Counter
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Literal, Protocol
 
+import jieba
 import jieba.posseg as pseg
 from pydantic import BaseModel, Field
 
 from eval.metrics import entity_recall, hallucination_rate, numeral_recall
 from scripts.vernacularize import PROPER_NOUN_FLAGS, extract_quantities
+
+MANUAL_ENTITY_PATH = Path(__file__).resolve().parents[1] / "corpus" / "manual_entities.json"
+# jieba tags 登基 as nrt and 入宫 as ns, so a verb flag never fires. These are the
+# same class of verbal false positives already sitting in the automatic gazetteer.
+VERB_FALSE_POSITIVES: frozenset[str] = frozenset(
+    {
+        "登基",
+        "入宫",
+        "登门",
+        "上楼",
+        "上门",
+        "上路",
+        "上山",
+        "回京",
+        "回城",
+        "南伐",
+        "西巡",
+        "塞进",
+        "涂抹",
+        "张开",
+        "张望",
+        "张大",
+        "张直",
+        "张狂",
+        "雨淋",
+        "长大",
+        "胡说",
+        "呼唤",
+        "测字",
+        "陈述",
+        "仰天长叹",
+        "别以为",
+        "任凭",
+    }
+)
 
 # Offices and ranked appellations. Synonyms are intentionally empty: 太医 is not 宫监.
 TITLES: frozenset[str] = frozenset(
@@ -39,6 +78,61 @@ TITLES: frozenset[str] = frozenset(
     }
 )
 GAZETTEER_MIN_COUNT = 3
+# jieba dict.txt frequency, snapshotted before the manual user dictionary.
+# 200 sits below 白痴 (242) and above the checked name 老王 (190).
+COMMON_WORD_MIN_FREQ = 200
+_USERDICT_READY = False
+_MANUAL_ENTITIES: list[ManualEntity] | None = None
+_GENERAL_FREQ: dict[str, int] | None = None
+_STABLE_TOKEN: dict[str, bool] = {}
+
+
+class ManualEntity(BaseModel):
+    """One hand-checked name. The string is also the jieba user-dictionary token."""
+
+    name: str
+    kind: Literal["person", "place"]
+    works: list[str]
+
+
+def load_manual_entities() -> list[ManualEntity]:
+    """Read the committed name list. No sentences are stored in that file."""
+    global _MANUAL_ENTITIES
+    if _MANUAL_ENTITIES is None:
+        payload = json.loads(MANUAL_ENTITY_PATH.read_text(encoding="utf-8"))
+        _MANUAL_ENTITIES = [ManualEntity.model_validate(item) for item in payload["entities"]]
+    return _MANUAL_ENTITIES
+
+
+def general_frequencies() -> dict[str, int]:
+    """jieba's general-vocabulary counts, before any story names are inserted."""
+    global _GENERAL_FREQ
+    if _GENERAL_FREQ is None:
+        jieba.initialize()
+        _GENERAL_FREQ = dict(jieba.dt.FREQ)
+    return _GENERAL_FREQ
+
+
+def ensure_manual_userdict() -> None:
+    """Load the manual names into jieba once, so compounds stay one token."""
+    global _USERDICT_READY
+    if _USERDICT_READY:
+        return
+    general_frequencies()
+    lines = [
+        f"{item.name} 100000 {'nr' if item.kind == 'person' else 'ns'}"
+        for item in load_manual_entities()
+    ]
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        suffix=".dict",
+        delete=False,
+    ) as handle:
+        handle.write("\n".join(lines) + "\n")
+        dict_path = handle.name
+    jieba.load_userdict(dict_path)
+    _USERDICT_READY = True
 
 
 class EntityTagger(Protocol):
@@ -73,9 +167,10 @@ class FidelityReport(BaseModel):
 
 
 class JiebaTagger:
-    """Proper-noun tags already used by the corpus tools."""
+    """Proper-noun tags. The manual user dictionary is loaded before cutting."""
 
     def entities(self, text: str) -> set[str]:
+        ensure_manual_userdict()
         return {
             word
             for word, flag in pseg.cut(text)
@@ -91,17 +186,76 @@ def numeral_keys(text: str) -> set[str]:
     )
 
 
+def manual_mentions(text: str) -> set[str]:
+    """Longest-match the hand-checked names, including single-character protagonists."""
+    ensure_manual_userdict()
+    names = sorted((item.name for item in load_manual_entities()), key=len, reverse=True)
+    occupied = bytearray(len(text))
+    found: set[str] = set()
+    for name in names:
+        start = 0
+        while True:
+            index = text.find(name, start)
+            if index < 0:
+                break
+            end = index + len(name)
+            if not any(occupied[index:end]):
+                found.add(name)
+                occupied[index:end] = b"\x01" * len(name)
+            start = index + 1
+    return found
+
+
+def _stable_token(word: str) -> bool:
+    """True when jieba keeps this string as one word, not a context fragment."""
+    cached = _STABLE_TOKEN.get(word)
+    if cached is None:
+        ensure_manual_userdict()
+        cached = list(jieba.cut(word)) == [word]
+        _STABLE_TOKEN[word] = cached
+    return cached
+
+
+def supplementary_words(words: Iterable[str]) -> set[str]:
+    """Gazetteer entries the supplementary channel can still emit."""
+    return {word for word in words if not _supplement_rejected(word, set())}
+
+
+def _supplement_rejected(word: str, manual_hits: set[str]) -> bool:
+    """Drop verbs, common nouns, unstable fragments, and pieces of a longer name."""
+    if word in VERB_FALSE_POSITIVES or word in TITLES or len(word) < 2:
+        return True
+    if general_frequencies().get(word, 0) >= COMMON_WORD_MIN_FREQ:
+        return True
+    if not _stable_token(word):
+        return True
+    if any(word != name and word in name for name in manual_hits):
+        return True
+    manual_names = {item.name for item in load_manual_entities()}
+    return any(word != name and name in word and word not in manual_names for name in manual_names)
+
+
 def extract_facts(
     text: str,
     gaz: set[str],
     tagger: EntityTagger | None = None,
 ) -> Facts:
-    """Collect gazetteer hits, tagger hits, normalized numerals, and known titles."""
+    """Manual names are primary. Counted, stable gazetteer words only supplement."""
     titles = {title for title in TITLES if title in text}
-    tagged = (tagger or JiebaTagger()).entities(text)
-    entities = {word for word in tagged if word not in titles and len(word) >= 2}
-    entities.update(word for word in gaz if word in text and word not in titles and len(word) >= 2)
-    return Facts(entities=entities, numerals=numeral_keys(text), titles=titles)
+    manual = manual_mentions(text)
+    # A live jieba tag joins only when the train gazetteer already counted it.
+    # One-off fragments such as 宫面圣 never reach GAZETTEER_MIN_COUNT.
+    counted = {word for word in (tagger or JiebaTagger()).entities(text) if word in gaz}
+    supplement = {
+        word
+        for word in set(gaz) | counted
+        if word in text and word in gaz and not _supplement_rejected(word, manual)
+    }
+    return Facts(
+        entities=(manual | supplement) - titles,
+        numerals=numeral_keys(text),
+        titles=titles,
+    )
 
 
 def title_violations(source: set[str], output: set[str]) -> list[Violation]:

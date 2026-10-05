@@ -1,6 +1,15 @@
+import json
 import math
+from pathlib import Path
 
-from eval.fidelity import JiebaTagger, assess, build_entity_gazetteer, extract_facts
+from eval.fidelity import (
+    JiebaTagger,
+    assess,
+    build_entity_gazetteer,
+    extract_facts,
+    load_manual_entities,
+    supplementary_words,
+)
 from eval.metrics import entity_recall, hallucination_rate, numeral_recall
 
 
@@ -73,6 +82,43 @@ def test_extra_entity_is_a_hallucination() -> None:
     report = assess("屋里安静", "颂莲来了", {"颂莲"}, tagger=EmptyTagger())
     assert report.entity_recall == 1.0
     assert report.hallucination_rate == 1.0
+
+
+def test_manual_names_are_found_and_verbs_are_not() -> None:
+    gazetteer = set(json.loads(Path("corpus/gazetteer.json").read_text(encoding="utf-8"))["words"])
+    sentences = {
+        "颂莲": "四太太颂莲坐着轿子进了陈家的花园，陈佐千很满意",
+        "端白": "燮王端白十四岁登基，皇甫夫人病了三个月",
+        "沉草": "沉草从县立中学回来，长工陈茂赶马车去枫杨树接他",
+        "娴": "娴在照相馆楼上住了三年，芝分配到水泥厂",
+    }
+    found: dict[str, set[str]] = {
+        label: extract_facts(text, gazetteer).entities for label, text in sentences.items()
+    }
+    assert "颂莲" in found["颂莲"]
+    assert "端白" in found["端白"]
+    assert "皇甫夫人" in found["端白"]
+    assert "王端白" not in found["端白"]
+    assert "登基" not in found["端白"]
+    assert "沉草" in found["沉草"]
+    assert "枫杨树" in found["沉草"]
+    assert "枫杨" not in found["沉草"]
+    assert "娴" in found["娴"]
+    assert "芝" in found["娴"]
+    assert len(load_manual_entities()) == 67
+
+
+def test_fragment_and_common_noun_are_not_entities() -> None:
+    gazetteer = set(json.loads(Path("corpus/gazetteer.json").read_text(encoding="utf-8"))["words"])
+    court = extract_facts("太医说要入宫面圣，丞相冯敖已经罢官回乡", gazetteer).entities
+    shopping = extract_facts("今天天气不错，他出门买了点东西", gazetteer).entities
+    assert "冯敖" in court
+    assert "宫面圣" not in court
+    assert "东西" not in shopping
+    kept = supplementary_words(gazetteer)
+    for word in ("东西", "明白", "阳光", "孙子", "白痴"):
+        assert word not in kept
+    assert "冯敖" in kept
 
 
 def test_gazetteer_keeps_names_that_clear_the_count() -> None:
