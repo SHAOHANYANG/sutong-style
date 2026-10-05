@@ -89,6 +89,54 @@ def test_replacement_extraction_is_fixed_and_filters_colloquial_l(tmp_path: Path
     assert {row.term for row in first.terms} >= {"蓦然", "绯红"}
 
 
+def test_manual_replacement_catalog_has_approved_67_terms() -> None:
+    catalog = json.loads(
+        Path("scripts/data/approved_replacement_terms.json").read_text(encoding="utf-8")
+    )
+    assert catalog["version"] == "manual-approved-v1"
+    assert len(catalog["terms"]) == len(set(catalog["terms"])) == 67
+    assert {"仿佛", "犹如"} <= set(catalog["terms"])
+    assert not {"莫名其妙", "小心翼翼", "不可思议"} & set(catalog["terms"])
+
+
+def test_destroy_prompt_carries_category_rules_and_all_reviewed_examples() -> None:
+    prompt = Path("scripts/prompts/two_pass/destroy.txt").read_text(encoding="utf-8")
+    catalog = json.loads(
+        Path("scripts/data/approved_replacement_terms.json").read_text(encoding="utf-8")
+    )
+    assert "清单只是示例，不是穷举" in prompt
+    assert "莫名其妙、小心翼翼、不可思议是口语常用例外" in prompt
+    assert "之、其、乃、遂、颇、甚、矣" in prompt
+    assert "凝视、伫立、颔首、蹙眉、噙、沁" in prompt
+    assert "仿佛、犹如、宛若" in prompt
+    assert "哭/泣" in prompt and "之间轮换" in prompt
+    assert "带序数的称谓" in prompt
+    assert "大少爷、大太太、二/三/四太太、二/三/四姨太" in prompt
+    assert "不得为了降重合率删掉事实" in prompt
+    assert all(f"{term} →" in prompt for term in catalog["terms"])
+
+
+def test_repair_prompt_only_restores_names_and_numbers() -> None:
+    prompt = Path("scripts/prompts/two_pass/repair.txt").read_text(encoding="utf-8")
+    assert "只允许做两件事" in prompt
+    assert "不得恢复任何被有意替换的形容词、副词、成语、四字格" in prompt
+    assert "不得以“更贴近原文”为由" in prompt
+    assert "PINC-4和PINC-6不得低于第一遍" in prompt
+    assert "entity 或 numeral" in prompt
+    assert "event/causality/dialogue/other" not in prompt
+
+
+def test_repair_pinc_decrease_tolerance_is_zero() -> None:
+    first = measure("甲乙丙丁戊己庚辛壬癸", "子丑寅卯辰巳午未申酉", [], [])
+    assert first.pinc4 == 1 and first.pinc6 == 1
+    slight = first.model_copy(update={"pinc4": 0.99, "pinc6": 0.99})
+    failures = final_failures(first, slight)
+    assert "pinc4_repair_decrease" in failures
+    assert "pinc6_repair_decrease" in failures
+    assert "pinc4_below_limit" not in failures
+    assert "pinc4_repair_decrease" not in final_failures(first, first)
+
+
 def fixture_data() -> tuple[list[CorpusChunk], RebuildReport, list[VernacularExample], RunMetadata]:
     chunks = [
         CorpusChunk(id=f"虚构_{i:04d}", work="虚构", idx=i, original="甲乙在河边说话" * 32)
@@ -152,7 +200,7 @@ def test_two_calls_per_case_seeds_preserved_no_retries(tmp_path: Path, invalid_j
         chunks,
         baseline,
         examples,
-        ReplacementLexicon(jieba_version="fake", source_sha256={}, terms=[]),
+        [],
         fake,
         metadata,
         tmp_path / "report.json",
@@ -184,7 +232,7 @@ def test_mismatch_stops_queued_calls_and_preserves_failures(tmp_path: Path) -> N
         chunks,
         baseline,
         examples,
-        ReplacementLexicon(jieba_version="fake", source_sha256={}, terms=[]),
+        [],
         fake,
         metadata,
         tmp_path / "report.json",

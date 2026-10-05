@@ -175,10 +175,8 @@ def measure(original: str, output: str, banned: list[str], entities: list[str]) 
     expected = numeric_values(original, entities)
     actual = numeric_values(output, entities)
     missing_entities = [word for word in entities if word not in output]
-    unprotected_source = mask_entities(original, entities)
     unprotected_target = mask_entities(output, entities)
-    idioms = {word for word, flag in pseg.cut(unprotected_source) if flag == "i"}
-    residue = sorted(word for word in set(banned) | idioms if word in unprotected_target)
+    residue = sorted(word for word in set(banned) if word in unprotected_target)
     novelty = {n: pinc(original, output, n) for n in (1, 2, 3, 4, 6)}
     standard_orders = [novelty[n] for n in (1, 2, 3, 4)]
     return TextMetrics(
@@ -220,7 +218,7 @@ def final_failures(first: TextMetrics, final: TextMetrics) -> list[str]:
         else:
             if after < minimum - 1e-12:
                 failures.append(f"{name}_below_limit")
-            if before - after > 0.03 + 1e-12:
+            if before - after > 1e-12:
                 failures.append(f"{name}_repair_decrease")
     if not 0.6 <= final.length_ratio <= 1.6:
         failures.append("length_out_of_range")

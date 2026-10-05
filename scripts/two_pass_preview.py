@@ -19,7 +19,6 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field, ValidationError
 
 from scripts.chunk_corpus import CorpusChunk
-from scripts.extract_replacements import ReplacementLexicon
 from scripts.rebuild_metrics import TextMetrics, entity_candidates, final_failures, measure
 from scripts.rebuild_reporting import (
     AttemptArtifact,
@@ -41,7 +40,7 @@ from scripts.vernacularize import (
 )
 
 LOGGER = structlog.get_logger()
-LEXICON_PATH = Path("scripts/data/mandatory_replacements.json")
+APPROVED_REPLACEMENTS_PATH = Path("scripts/data/approved_replacement_terms.json")
 TWO_PASS_DIR = PROMPT_DIR / "two_pass"
 METRICS = (
     "pinc1",
@@ -61,7 +60,7 @@ METRICS = (
 
 
 class RepairIssue(BaseModel):
-    category: Literal["entity", "numeral", "event", "causality", "dialogue", "other"]
+    category: Literal["entity", "numeral"]
     lost_or_changed_fact: str
     repair: str
 
@@ -69,6 +68,14 @@ class RepairIssue(BaseModel):
 class RepairReply(BaseModel):
     issues: list[RepairIssue]
     repaired_text: str = Field(min_length=1)
+
+
+class ApprovedReplacementTerms(BaseModel):
+    """Manually reviewed examples for residue checks; category rules remain prompt-only."""
+
+    version: str
+    source_document: str
+    terms: list[str]
 
 
 class StageObservation(BaseModel):
@@ -126,7 +133,9 @@ class TwoPassReport(BaseModel):
     preflight_reports: list[str] = Field(
         default_factory=lambda: ["corpus/rebuild_report_two_pass_preflight_20261003.json"]
     )
-    preregistration: str = "SPEC 1.5.1; PINC amendment registered before external generation"
+    preregistration: str = (
+        "SPEC 1.5.2; manual lexicon review and category rules approved before preview"
+    )
     metric_definitions: dict[str, str] = Field(
         default_factory=lambda: {
             "PINC": "Chinese-only candidate occurrences; binary source membership; macro mean",
@@ -232,7 +241,7 @@ def run_experiment(
     chunks: list[CorpusChunk],
     baseline: RebuildReport,
     examples: list[VernacularExample],
-    lexicon: ReplacementLexicon,
+    approved_terms: list[str],
     generator: Generator,
     metadata: RunMetadata,
     report_path: Path,
@@ -243,7 +252,7 @@ def run_experiment(
         raise ValueError("Only one 20-case no-retry experiment is permitted")
     old_records = {row.id: row for row in baseline.per_case}
     by_example = {row.id: row for row in examples}
-    banned = [row.term for row in lexicon.terms]
+    banned = approved_terms
     lock, aborted = threading.Lock(), threading.Event()
     results: list[CaseResult] = []
     artifacts_path.parent.mkdir(parents=True, exist_ok=True)
@@ -449,10 +458,11 @@ def main() -> int:
     for source, digest in metadata.source_sha256.items():
         if hashlib.sha256(Path(source).read_bytes()).hexdigest() != digest:
             raise ValueError(f"Source changed: {source}")
-    lexicon = ReplacementLexicon.model_validate_json(LEXICON_PATH.read_text(encoding="utf-8"))
-    for source, digest in lexicon.source_sha256.items():
-        if hashlib.sha256(Path(source).read_bytes()).hexdigest() != digest:
-            raise ValueError(f"Raw lexicon source changed: {source}")
+    approved = ApprovedReplacementTerms.model_validate_json(
+        APPROVED_REPLACEMENTS_PATH.read_text(encoding="utf-8")
+    )
+    if len(approved.terms) != 67 or len(set(approved.terms)) != 67:
+        raise ValueError("Approved replacement catalog must contain exactly 67 unique terms")
     all_chunks = {row.id: row for row in load_chunks(Path("corpus/chunks.jsonl"))}
     chunks = [all_chunks[case_id] for case_id in metadata.selected_ids]
     examples = load_style_examples(Path("corpus/salvaged_pairs.jsonl"))
@@ -485,7 +495,7 @@ def main() -> int:
         PROMPT_DIR / "examples.txt",
         TWO_PASS_DIR / "destroy.txt",
         TWO_PASS_DIR / "repair.txt",
-        LEXICON_PATH,
+        APPROVED_REPLACEMENTS_PATH,
     ]
     metadata.prompt_sha256 = hashlib.sha256(
         b"".join(path.read_bytes() for path in prompt_paths)
@@ -493,7 +503,7 @@ def main() -> int:
     metadata.source_sha256.update(
         {
             str(path): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in [flash_path, pro_path, LEXICON_PATH]
+            for path in [flash_path, pro_path, APPROVED_REPLACEMENTS_PATH]
         }
     )
     metadata.mode = "two_pass_design_preview"
@@ -529,10 +539,10 @@ def main() -> int:
     )
     LOGGER.info("two_pass_preflight", cases=20, max_calls=40, review_sample_ids=review_ids)
     cases, status = run_experiment(
-        chunks, pro, examples, lexicon, generator, metadata, args.report, artifacts_path
+        chunks, pro, examples, approved.terms, generator, metadata, args.report, artifacts_path
     )
     metadata.completed_at_utc = datetime.now(UTC).isoformat()
-    banned = [row.term for row in lexicon.terms]
+    banned = approved.terms
     comparisons: dict[str, MetricSummary] = {}
     for label, report in (("flash_round2", flash), ("pro_control", pro)):
         if report.artifacts_path is None:
