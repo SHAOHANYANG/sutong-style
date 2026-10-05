@@ -1026,11 +1026,12 @@ def main() -> int:
     if args.retries < 0:
         raise ValueError("retries 不得为负数")
     load_dotenv()
-    if args.gate == "content" and (
-        os.environ.get("VERNACULARIZE_MODEL", "deepseek-v4-pro") != "deepseek-v4-pro"
-        or urlsplit(os.environ.get("LLM_BASE_URL", "")).hostname != "api.deepseek.com"
-    ):
-        raise ValueError("Content-gate run requires deepseek-v4-pro at api.deepseek.com")
+    configured_model = os.environ.get("VERNACULARIZE_MODEL")
+    if args.gate == "content":
+        # deepseek-chat is the Flash alias. The full run must not follow it.
+        os.environ["VERNACULARIZE_MODEL"] = "deepseek-v4-pro"
+        if urlsplit(os.environ.get("LLM_BASE_URL", "")).hostname != "api.deepseek.com":
+            raise ValueError("Content-gate run requires api.deepseek.com")
     api_key = os.environ.get("LLM_API_KEY")
     if not api_key:
         LOGGER.error("missing_environment", variable="LLM_API_KEY")
@@ -1057,6 +1058,10 @@ def main() -> int:
             candidates, count=args.limit, seed=args.seed, excluded_ids=excluded_ids
         )
     metadata = run_metadata(args, chunks, examples)
+    if args.gate == "content" and configured_model not in (None, "deepseek-v4-pro"):
+        metadata.control_verification = (
+            f"VERNACULARIZE_MODEL was {configured_model}; content-gate run forced deepseek-v4-pro."
+        )
     if args.limit and not args.preview_reference:
         selected_ids = {chunk.id for chunk in chunks}
         for chunk in load_chunks(args.chunks):
