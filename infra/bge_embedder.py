@@ -14,6 +14,7 @@ DEFAULT_BATCH_SIZE = 8
 class BgeEmbedder:
     """CLS pooling of the last hidden state, then L2 normalization.
 
+    Weights are float32 on CPU and CUDA, so the two devices share one numeric scale.
     Chunks are 200-400 characters, so 512 tokens covers them on an 8GB card.
     The index normalizes again; this normalization is part of the bge-m3 dense definition.
     """
@@ -41,7 +42,7 @@ class BgeEmbedder:
         if device is None:
             device = "cuda" if bool(torch.cuda.is_available()) else "cpu"
         self.device = device
-        dtype = torch.bfloat16 if device.startswith("cuda") else torch.float32
+        dtype = torch.float32
         self._tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
         self._model = AutoModel.from_pretrained(model_id, revision=revision, dtype=dtype)
         self._model.to(device)

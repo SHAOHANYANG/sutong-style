@@ -1,5 +1,8 @@
 import ast
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -7,8 +10,8 @@ import pytest
 
 from retrieval import DenseCacheError, DenseIndex, Document, load_dense_cache, save_dense_cache
 from scripts.build_dense_index import train_documents
-from scripts.chunk_corpus import CorpusChunk
 from scripts.split_corpus import CorpusSplit
+from scripts.train import Pair
 from tests.fakes import FakeEmbedder
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -224,26 +227,94 @@ def test_fake_embedder_is_deterministic() -> None:
     assert FakeEmbedder(dim=4).encode([]).shape == (0, 4)
 
 
-def test_train_documents_follow_split_order_and_drop_eval() -> None:
-    chunks = [
-        CorpusChunk(id="b", work="自编", idx=2, original="乙"),
-        CorpusChunk(id="e", work="自编", idx=3, original="评"),
-        CorpusChunk(id="a", work="自编", idx=1, original="甲"),
+def _pair(doc_id: str, split: str, original: str) -> Pair:
+    return Pair(id=doc_id, work="自编", idx=1, vernacular="白话", original=original, split=split)
+
+
+def test_train_documents_keep_pairs_order_and_drop_eval() -> None:
+    pairs = [
+        _pair("b", "train", "乙"),
+        _pair("e", "eval", "评"),
+        _pair("a", "train", "甲"),
     ]
     split = CorpusSplit(seed=42, eval_ratio=0.08, train=["a", "b"], eval=["e"])
-    documents = train_documents(chunks, split)
-    assert [(document.id, document.text) for document in documents] == [("a", "甲"), ("b", "乙")]
+    documents = train_documents(pairs, split)
+    assert [(document.id, document.text) for document in documents] == [("b", "乙"), ("a", "甲")]
 
 
-def test_train_documents_reject_missing_unknown_and_duplicate_ids() -> None:
+def test_train_documents_reject_id_absent_from_split_train() -> None:
     split = CorpusSplit(seed=42, eval_ratio=0.08, train=["a"], eval=[])
-    with pytest.raises(ValueError, match="缺失"):
-        train_documents([], split)
-    with pytest.raises(ValueError, match="不在 split"):
-        train_documents([CorpusChunk(id="z", work="自编", idx=1, original="甲")], split)
-    duplicated = CorpusSplit(seed=42, eval_ratio=0.08, train=["a", "a"], eval=[])
+    with pytest.raises(ValueError, match=r"不在 split\.train"):
+        train_documents([_pair("z", "train", "甲")], split)
+
+
+def test_train_documents_reject_eval_id() -> None:
+    split = CorpusSplit(seed=42, eval_ratio=0.08, train=["a"], eval=["e"])
+    with pytest.raises(ValueError, match=r"split\.eval"):
+        train_documents([_pair("a", "train", "甲"), _pair("e", "train", "评")], split)
+
+
+def test_train_documents_reject_split_field_mismatch() -> None:
+    split = CorpusSplit(seed=42, eval_ratio=0.08, train=["a"], eval=[])
+    with pytest.raises(ValueError, match="不一致"):
+        train_documents([_pair("a", "eval", "甲")], split)
+
+
+def test_train_documents_reject_duplicate_ids() -> None:
+    split = CorpusSplit(seed=42, eval_ratio=0.08, train=["a"], eval=[])
     with pytest.raises(ValueError, match="重复"):
-        train_documents([CorpusChunk(id="a", work="自编", idx=1, original="甲")], duplicated)
+        train_documents([_pair("a", "train", "甲"), _pair("a", "train", "甲")], split)
+
+
+def test_dry_run_writes_nothing_and_does_not_import_torch(tmp_path: Path) -> None:
+    pairs_path = tmp_path / "pairs.jsonl"
+    split_path = tmp_path / "split.json"
+    output = tmp_path / "out"
+    rows = [
+        _pair("b", "train", "乙"),
+        _pair("e", "eval", "评"),
+        _pair("a", "train", "甲"),
+    ]
+    pairs_path.write_text("".join(row.model_dump_json() + "\n" for row in rows), encoding="utf-8")
+    split_path.write_text(
+        CorpusSplit(seed=42, eval_ratio=0.08, train=["a", "b"], eval=["e"]).model_dump_json(),
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; from scripts.build_dense_index import main; "
+            "main(['--pairs', sys.argv[1], '--split', sys.argv[2], "
+            "'--output-dir', sys.argv[3], '--dry-run']); "
+            "assert 'torch' not in sys.modules; assert 'transformers' not in sys.modules",
+            str(pairs_path),
+            str(split_path),
+            str(output),
+        ],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert not output.exists()
+    assert '"documents": 2' in proc.stdout
+    assert "dense_index_dry_run" in proc.stdout
+
+
+@pytest.mark.gpu
+def test_bge_embedder_returns_unit_float64_rows() -> None:
+    from infra.bge_embedder import BgeEmbedder
+
+    vectors = BgeEmbedder().encode(["张三把两袋米放在门口。", "雨下了三天，井水浑了。"])
+    assert vectors.shape == (2, 1024)
+    assert vectors.dtype == np.float64
+    assert np.linalg.norm(vectors, axis=1) == pytest.approx([1.0, 1.0])
 
 
 def test_dense_modules_do_not_import_the_model_stack_at_import_time() -> None:

@@ -10,7 +10,7 @@ T1.2 写死了余弦、索引内 L2、不设分数阈值、缓存必须带硬闸
 
 **假设**
 max_length 默认 512，batch 默认 8。chunk 合同是 200–400 字，512 盖得住，也比 bge-m3 的 8192 省显存。
-device 不传时，有 CUDA 用 cuda 且权重用 bfloat16，否则 cpu + float32。transformers 5.5 用 `dtype=`，不用已弃用的 `torch_dtype=`。
+device 不传时，有 CUDA 用 cuda 且权重用 bfloat16，否则 cpu + float32。transformers 5.5 用 `dtype=`，不用已弃用的 `torch_dtype=`。下文 2026-10-06 的拍板改为两种设备都用 float32。
 Windows 这次没装 transformers，这个参数名按 5.5 文档写，留到 WSL 第一次跑脚本时验证。
 模型 revision 读 `config._commit_hash`。读不到就拒绝继续，不写一个无法核对的缓存。
 加载缓存时，除了 id 顺序、文本 sha256、模型标识和维度，也核对 revision 和 max_length。
@@ -27,6 +27,14 @@ mypy 把 `transformers` 补进已有的 GPU 栈 `ignore_missing_imports`。没�
 512 若截断了超长 chunk，脚本会打 `dense_index_truncated`，缓存仍写出，max_length 记在元数据里。
 默认池是全部 train chunk，不是过内容闸门的 743 对。T1.5 之前所有者可以收窄。
 `dtype=` 如果在 5.5 的 AutoModel 上不被接受，建索引脚本会在 WSL 上失败，那时候再改，不在 Windows 上猜一个能跑的导入。
+
+**2026-10-06 所有者已拍板：743**
+索引池改为 `corpus/pairs.jsonl` 里 `split=train` 的 `original`，当前 743 条，不再用全部 842 条 train chunk。
+原因：T1.5 的 few-shot 要按「白话 → 原文」成对给模型看，才和训练格式一致；另外 99 条 train chunk 的白话没过内容闸门，没有可用配对。缓存加载会核对 id 列表，用 842 条建的缓存拿 743 条去加载会被拒绝，所以必须在生成向量之前改掉。
+入选顺序是 pairs.jsonl 里的出现顺序。每个入选 id 必须在 split.train 里；出现在 split.eval、pair 的 split 字段与 split.json 不一致、或重复 id，都抛异常。条数是当前数据的事实，代码里不把 743 写成断言。
+上面关于「全部 train chunk」的假设保留，不再执行。权重在 CPU 和 CUDA 上都是 float32，不再在 CUDA 上用 bfloat16：精度没有进缓存元数据，也不在加载核对项里，两种设备必须同一数值口径。bge-m3 的 float32 大约 2.3 GB，8 GB 卡够用。
+`--dry-run` 照常读 pairs 和 split 并做上述核对，用 structlog 打一条 JSON（条数、输出目录、模型名、max_length、batch_size）后退出。不构造 BgeEmbedder，不 import torch 或 transformers，不写文件。
+实现上把 split 字段与 split.json 的对照覆盖 pairs.jsonl 里的每一条，不只是入选的 train 行。`pair.split` 不是 train 或 eval，或同一个 id 同时出现在 split.train 和 split.eval，也按不一致拒绝。
 
 ## Q19 — BM25 未写死的词频、重复 id 与停用词边界（2026-10-06，按假设实现）
 

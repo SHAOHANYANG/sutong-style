@@ -649,7 +649,7 @@ dense 路本阶段不接 pgvector。Postgres 的建表与迁移是 T3.3。索引
 检索索引池只允许包含 `corpus/split.json` 里 `split=train` 的 chunk。
 eval 的 original 是评估的 ground truth，进了索引就等于把答案当范例给模型看。
 查询来自训练集时，须用 `exclude_ids` 排除该条自己的 original。
-索引池具体取哪个 train 子集待定，由仓库所有者在 T1.5 前决定。
+索引池已决定用过内容闸门的 train 对：从 `corpus/pairs.jsonl` 取 `split=train` 的 `original`，当前是 743 条。后面 T1.5 的 few-shot 范例要以「白话 → 原文」成对给模型看，才和训练时的格式一致；另外 99 条 train chunk 的白话没过内容闸门，没有可用的配对。每个入选 id 必须在 `split.train` 里；只要有一个出现在 `split.eval` 里，或某条的 split 字段与 `split.json` 不一致，或出现重复 id，就拒绝建索引。
 
 style 路为什么不用向量库：907 条 × 20 维，暴力算是微秒级，上向量库纯属负担。
 

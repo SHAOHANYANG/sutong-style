@@ -115,7 +115,7 @@ uv run python -m eval.run_eval --config eval/configs/eval59.yaml \
 ~/venvs/sutong/bin/python -m scripts.build_dense_index --device cpu
 ```
 
-默认编码 `corpus/split.json` 里全部 train 原文，max_length 512，batch 8。有 CUDA 时用 bfloat16。日志里的 `truncated` 大于 0 表示有 chunk 被截断。缓存和当前语料或模型对不上时，加载会直接报错，不会静默重算。
+默认编码 `corpus/pairs.jsonl` 里 `split` 为 train 的原文（当前 743 条，过了内容闸门的配对），max_length 512，batch 8，权重 float32。先加 `--dry-run` 可以只核对条数和路径，不下载模型、不写文件。日志里的 `truncated` 大于 0 表示有 chunk 被截断。缓存和当前语料或模型对不上时，加载会直接报错，不会静默重算。
 
 ## Quickstart
 
