@@ -31,8 +31,11 @@ class StyleReference:
         std = np.maximum(vectors.std(axis=0, ddof=0), STD_FLOOR).astype(np.float64)
         return cls(mean=mean, std=std, lexicon=lexicon)
 
+    def zscore(self, text: str) -> NDArray[np.float64]:
+        """Standardize one text with this reference's mean and std."""
+        vector = extract(text, self.lexicon)
+        return np.asarray((vector - self.mean) / self.std, dtype=np.float64)
+
     def distance(self, text: str) -> float:
         """Euclidean distance of the z-scored vector, divided by sqrt(20)."""
-        vector = extract(text, self.lexicon)
-        standardized = (vector - self.mean) / self.std
-        return float(np.linalg.norm(standardized) / np.sqrt(len(FEATURE_NAMES)))
+        return float(np.linalg.norm(self.zscore(text)) / np.sqrt(len(FEATURE_NAMES)))

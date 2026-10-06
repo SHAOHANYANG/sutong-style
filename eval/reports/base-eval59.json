@@ -1,6 +1,6 @@
 {
   "run_id": "base-eval59",
-  "timestamp": "2026-10-06T00:57:53Z",
+  "timestamp": "2026-10-06T23:15:37Z",
   "pipeline": "baseline",
   "model": "base",
   "config": {
@@ -22,6 +22,8 @@
   "n_cases": 59,
   "aggregate": {
     "style_distance": 1.149013318260184,
+    "profile_gap": 0.49436609420155325,
+    "profile_gap_per_case": 0.7475972355347063,
     "entity_recall": 0.9581920903954801,
     "numeral_recall": 0.9231638418079097,
     "hallucination_rate": 0.00423728813559322,
@@ -38,6 +40,16 @@
       "q3": 1.1762875835285949,
       "min": 0.6939545361577709,
       "max": 6.19821898252284
+    },
+    "profile_gap": null,
+    "profile_gap_per_case": {
+      "mean": 0.7475972355347063,
+      "std": 0.4479698280843611,
+      "median": 0.6838972565648023,
+      "q1": 0.5679353441264495,
+      "q3": 0.8337926188283717,
+      "min": 0.2357986454290865,
+      "max": 3.1901381773617254
     },
     "entity_recall": {
       "mean": 0.9581920903954801,
@@ -78,11 +90,60 @@
     },
     "ppl": null
   },
+  "profile_mean_delta": {
+    "sent_len_mean": -0.4576350649803091,
+    "sent_len_std": -0.6292241624579863,
+    "sent_len_p90": -0.6217941265478149,
+    "comma_ratio": -0.5676070862952366,
+    "period_ratio": -0.18259504610320784,
+    "quote_density": 0.7406890813764238,
+    "dialogue_verb_density": 0.021517860019709893,
+    "simile_density": 0.02718551758747714,
+    "fw_的": -0.7156060651822392,
+    "fw_了": 0.7198987002183879,
+    "fw_着": 0.31215050904651637,
+    "fw_地": -0.1533750283980669,
+    "fw_而": -0.7542518168195679,
+    "fw_其": -0.3547125689239432,
+    "fw_之": -0.43095897733802346,
+    "ttr": -0.38151167449575946,
+    "avg_word_len": -0.39404206135325337,
+    "literary_hit": -1.3043258535164712,
+    "cjk_numeral_ratio": 0.3906222122703417,
+    "para_density": -0.7276184711003284
+  },
+  "vernacular_input": {
+    "profile_gap": 0.44965307613294636,
+    "profile_gap_per_case": 0.6234479961821858,
+    "profile_mean_delta": {
+      "sent_len_mean": -0.48994104186654536,
+      "sent_len_std": -0.5781503132480091,
+      "sent_len_p90": -0.6122877339574924,
+      "comma_ratio": -0.5705171649001243,
+      "period_ratio": -0.06891847761146129,
+      "quote_density": 0.7097663909259864,
+      "dialogue_verb_density": 0.1197402181751151,
+      "simile_density": 0.038134993669646844,
+      "fw_的": -0.6384275600049788,
+      "fw_了": 0.3629936045524941,
+      "fw_着": 0.2900167241223916,
+      "fw_地": -0.17708992737624776,
+      "fw_而": -0.7540056723290834,
+      "fw_其": -0.2960630988856454,
+      "fw_之": -0.45458634081328525,
+      "ttr": -0.22397024171588456,
+      "avg_word_len": -0.5961798150714248,
+      "literary_hit": -1.4351191451931202,
+      "cjk_numeral_ratio": 0.30344085885459016,
+      "para_density": -0.27371219938540126
+    }
+  },
   "per_case": [
     {
       "id": "妻妾成群_0051",
       "metrics": {
         "style_distance": 1.0683128157783948,
+        "profile_gap_per_case": 0.4097551742370613,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -96,6 +157,7 @@
       "id": "妻妾成群_0059",
       "metrics": {
         "style_distance": 0.8470109258456787,
+        "profile_gap_per_case": 0.2473472304561873,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -109,6 +171,7 @@
       "id": "妻妾成群_0066",
       "metrics": {
         "style_distance": 1.1699765684356547,
+        "profile_gap_per_case": 0.3867491963061577,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -122,6 +185,7 @@
       "id": "妻妾成群_0091",
       "metrics": {
         "style_distance": 1.182598598621535,
+        "profile_gap_per_case": 0.3756838109232628,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -135,6 +199,7 @@
       "id": "妻妾成群_0100",
       "metrics": {
         "style_distance": 0.6939545361577709,
+        "profile_gap_per_case": 0.4580550038860496,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -148,6 +213,7 @@
       "id": "妻妾成群_0109",
       "metrics": {
         "style_distance": 1.1686574187966594,
+        "profile_gap_per_case": 0.6196425315689867,
         "entity_recall": 0.6666666666666666,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -161,6 +227,7 @@
       "id": "妻妾成群_0116",
       "metrics": {
         "style_distance": 0.8690459661763658,
+        "profile_gap_per_case": 0.596473287680794,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -174,6 +241,7 @@
       "id": "妇女生活_0007",
       "metrics": {
         "style_distance": 0.9156719584007764,
+        "profile_gap_per_case": 0.6597052357433895,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -187,6 +255,7 @@
       "id": "妇女生活_0026",
       "metrics": {
         "style_distance": 1.0886146981699676,
+        "profile_gap_per_case": 0.35170445162130176,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -200,6 +269,7 @@
       "id": "妇女生活_0050",
       "metrics": {
         "style_distance": 1.1227710182427242,
+        "profile_gap_per_case": 0.8664431872189049,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -213,6 +283,7 @@
       "id": "妇女生活_0074",
       "metrics": {
         "style_distance": 1.2589998108108449,
+        "profile_gap_per_case": 0.6604242371003671,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -226,6 +297,7 @@
       "id": "妇女生活_0087",
       "metrics": {
         "style_distance": 1.0455832546070862,
+        "profile_gap_per_case": 0.2357986454290865,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -239,6 +311,7 @@
       "id": "另一种妇女生活_0012",
       "metrics": {
         "style_distance": 1.0286218945488443,
+        "profile_gap_per_case": 0.626016219208684,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -252,6 +325,7 @@
       "id": "另一种妇女生活_0033",
       "metrics": {
         "style_distance": 1.014345775907846,
+        "profile_gap_per_case": 0.34685518666841286,
         "entity_recall": 1.0,
         "numeral_recall": 0.5,
         "hallucination_rate": 0.0,
@@ -265,6 +339,7 @@
       "id": "另一种妇女生活_0040",
       "metrics": {
         "style_distance": 1.1536794522055753,
+        "profile_gap_per_case": 1.0478158029384506,
         "entity_recall": 0.4,
         "numeral_recall": 0.0,
         "hallucination_rate": 0.0,
@@ -278,6 +353,7 @@
       "id": "另一种妇女生活_0049",
       "metrics": {
         "style_distance": 1.2732739161762887,
+        "profile_gap_per_case": 0.9957086418929192,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -291,6 +367,7 @@
       "id": "另一种妇女生活_0054",
       "metrics": {
         "style_distance": 0.895678368763681,
+        "profile_gap_per_case": 0.333225503155117,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -304,6 +381,7 @@
       "id": "另一种妇女生活_0067",
       "metrics": {
         "style_distance": 0.9188206666825341,
+        "profile_gap_per_case": 1.0676249986090447,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -317,6 +395,7 @@
       "id": "园艺_0013",
       "metrics": {
         "style_distance": 0.7560910526939668,
+        "profile_gap_per_case": 0.7011842679343833,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -330,6 +409,7 @@
       "id": "园艺_0032",
       "metrics": {
         "style_distance": 1.3988878769033004,
+        "profile_gap_per_case": 1.003530189130942,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -343,6 +423,7 @@
       "id": "园艺_0042",
       "metrics": {
         "style_distance": 0.7539640367914763,
+        "profile_gap_per_case": 0.8328867657810033,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -356,6 +437,7 @@
       "id": "园艺_0082",
       "metrics": {
         "style_distance": 0.893032319594033,
+        "profile_gap_per_case": 0.7860613494524522,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -369,6 +451,7 @@
       "id": "园艺_0095",
       "metrics": {
         "style_distance": 0.8579725389146602,
+        "profile_gap_per_case": 1.001552216560475,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.25,
@@ -382,6 +465,7 @@
       "id": "园艺_0106",
       "metrics": {
         "style_distance": 0.7015423780519224,
+        "profile_gap_per_case": 0.7275992076814801,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -395,6 +479,7 @@
       "id": "园艺_0107",
       "metrics": {
         "style_distance": 0.8807373996715474,
+        "profile_gap_per_case": 0.9648884681289628,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -408,6 +493,7 @@
       "id": "罂粟之家_0005",
       "metrics": {
         "style_distance": 1.3428951674219018,
+        "profile_gap_per_case": 0.688531667804208,
         "entity_recall": 1.0,
         "numeral_recall": 0.0,
         "hallucination_rate": 0.0,
@@ -421,6 +507,7 @@
       "id": "罂粟之家_0018",
       "metrics": {
         "style_distance": 0.8446229170844006,
+        "profile_gap_per_case": 0.5417090402789458,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -434,6 +521,7 @@
       "id": "罂粟之家_0031",
       "metrics": {
         "style_distance": 0.7951222712367291,
+        "profile_gap_per_case": 0.8984694550047838,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -447,6 +535,7 @@
       "id": "罂粟之家_0054",
       "metrics": {
         "style_distance": 1.8321413597907659,
+        "profile_gap_per_case": 0.24757707795288564,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -460,6 +549,7 @@
       "id": "罂粟之家_0055",
       "metrics": {
         "style_distance": 1.828921623436017,
+        "profile_gap_per_case": 0.2992316625767283,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -473,6 +563,7 @@
       "id": "罂粟之家_0094",
       "metrics": {
         "style_distance": 0.8336016267880394,
+        "profile_gap_per_case": 0.2891123398331906,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -486,6 +577,7 @@
       "id": "罂粟之家_0101",
       "metrics": {
         "style_distance": 1.2638257718856531,
+        "profile_gap_per_case": 0.480745202118113,
         "entity_recall": 0.8,
         "numeral_recall": 0.6666666666666666,
         "hallucination_rate": 0.0,
@@ -499,6 +591,7 @@
       "id": "罂粟之家_0117",
       "metrics": {
         "style_distance": 1.0338047073768355,
+        "profile_gap_per_case": 0.48457458068512177,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -512,6 +605,7 @@
       "id": "我的帝王生涯_0017",
       "metrics": {
         "style_distance": 0.9006734598971425,
+        "profile_gap_per_case": 0.5941616479739532,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -525,6 +619,7 @@
       "id": "我的帝王生涯_0046",
       "metrics": {
         "style_distance": 1.4126215088491134,
+        "profile_gap_per_case": 0.7273897311794949,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -538,6 +633,7 @@
       "id": "我的帝王生涯_0057",
       "metrics": {
         "style_distance": 1.5629283752178373,
+        "profile_gap_per_case": 0.660373697461617,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -551,6 +647,7 @@
       "id": "我的帝王生涯_0063",
       "metrics": {
         "style_distance": 1.243632152267295,
+        "profile_gap_per_case": 0.8346984718757403,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -564,6 +661,7 @@
       "id": "我的帝王生涯_0089",
       "metrics": {
         "style_distance": 1.6775079869905816,
+        "profile_gap_per_case": 0.950910803349547,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -577,6 +675,7 @@
       "id": "我的帝王生涯_0100",
       "metrics": {
         "style_distance": 0.9893150149133717,
+        "profile_gap_per_case": 0.6534825012834669,
         "entity_recall": 1.0,
         "numeral_recall": 0.5,
         "hallucination_rate": 0.0,
@@ -590,6 +689,7 @@
       "id": "我的帝王生涯_0104",
       "metrics": {
         "style_distance": 2.7674215599366323,
+        "profile_gap_per_case": 2.3482923340763073,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -603,6 +703,7 @@
       "id": "我的帝王生涯_0115",
       "metrics": {
         "style_distance": 0.8997209278408929,
+        "profile_gap_per_case": 0.6760562938097301,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -616,6 +717,7 @@
       "id": "我的帝王生涯_0116",
       "metrics": {
         "style_distance": 0.8765031460353392,
+        "profile_gap_per_case": 0.8115295697443742,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -629,6 +731,7 @@
       "id": "我的帝王生涯_0130",
       "metrics": {
         "style_distance": 0.8651150149250102,
+        "profile_gap_per_case": 0.7402431626301338,
         "entity_recall": 0.6666666666666666,
         "numeral_recall": 0.0,
         "hallucination_rate": 0.0,
@@ -642,6 +745,7 @@
       "id": "我的帝王生涯_0142",
       "metrics": {
         "style_distance": 0.8388832061816842,
+        "profile_gap_per_case": 0.8213084617528755,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -655,6 +759,7 @@
       "id": "我的帝王生涯_0225",
       "metrics": {
         "style_distance": 1.024746086728273,
+        "profile_gap_per_case": 0.6838972565648023,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -668,6 +773,7 @@
       "id": "我的帝王生涯_0250",
       "metrics": {
         "style_distance": 0.8601871045475289,
+        "profile_gap_per_case": 1.2467690537222638,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -681,6 +787,7 @@
       "id": "我的帝王生涯_0267",
       "metrics": {
         "style_distance": 0.7771634818626639,
+        "profile_gap_per_case": 0.803570386988906,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -694,6 +801,7 @@
       "id": "我的帝王生涯_0276",
       "metrics": {
         "style_distance": 6.19821898252284,
+        "profile_gap_per_case": 3.1901381773617254,
         "entity_recall": 0.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -707,6 +815,7 @@
       "id": "我的帝王生涯_0288",
       "metrics": {
         "style_distance": 0.7198511868532905,
+        "profile_gap_per_case": 0.9081757146431297,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -720,6 +829,7 @@
       "id": "我的帝王生涯_0298",
       "metrics": {
         "style_distance": 0.9135308812700665,
+        "profile_gap_per_case": 0.7741702250762535,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -733,6 +843,7 @@
       "id": "我的帝王生涯_0321",
       "metrics": {
         "style_distance": 1.0014501532935243,
+        "profile_gap_per_case": 0.8801157215153645,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -746,6 +857,7 @@
       "id": "我的帝王生涯_0363",
       "metrics": {
         "style_distance": 0.8712180477268952,
+        "profile_gap_per_case": 0.6755123401154165,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -759,6 +871,7 @@
       "id": "我的帝王生涯_0367",
       "metrics": {
         "style_distance": 0.8043944267546131,
+        "profile_gap_per_case": 0.7262258778115919,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -772,6 +885,7 @@
       "id": "我的帝王生涯_0372",
       "metrics": {
         "style_distance": 0.8394728981156252,
+        "profile_gap_per_case": 0.6336175904973843,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -785,6 +899,7 @@
       "id": "妻妾成群_0022",
       "metrics": {
         "style_distance": 0.915415041315514,
+        "profile_gap_per_case": 0.6408752629908072,
         "entity_recall": 1.0,
         "numeral_recall": 0.8,
         "hallucination_rate": 0.0,
@@ -798,6 +913,7 @@
       "id": "另一种妇女生活_0004",
       "metrics": {
         "style_distance": 0.8845786578531809,
+        "profile_gap_per_case": 0.798744475339925,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -811,6 +927,7 @@
       "id": "园艺_0091",
       "metrics": {
         "style_distance": 1.463128300443208,
+        "profile_gap_per_case": 0.6675104101280934,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -824,6 +941,7 @@
       "id": "罂粟之家_0052",
       "metrics": {
         "style_distance": 0.7851017128071881,
+        "profile_gap_per_case": 0.744274715614494,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,
@@ -837,6 +955,7 @@
       "id": "我的帝王生涯_0023",
       "metrics": {
         "style_distance": 0.966225770232077,
+        "profile_gap_per_case": 0.6835111774724135,
         "entity_recall": 1.0,
         "numeral_recall": 1.0,
         "hallucination_rate": 0.0,

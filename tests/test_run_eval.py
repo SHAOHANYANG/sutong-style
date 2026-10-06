@@ -4,7 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from eval.run_eval import AGGREGATE_FIELDS, build_judge_completer, evaluate, load_config, main
+from eval.run_eval import (
+    AGGREGATE_FIELDS,
+    EvalConfig,
+    build_judge_completer,
+    evaluate,
+    load_config,
+    main,
+)
+from stylometry.features import FEATURE_NAMES
 from tests.fakes import FakeGenerator
 from tests.test_judge import AlwaysA
 
@@ -78,7 +86,13 @@ def test_skip_judge_makes_no_network_request_and_writes_six_fields(
     assert payload["aggregate"]["ppl"] is None
     assert payload["aggregate"]["copy_ratio"] == 1.0
     assert payload["model"] == "fake"
-    for name in ("style_distance", "entity_recall", "numeral_recall", "hallucination_rate"):
+    for name in (
+        "style_distance",
+        "profile_gap_per_case",
+        "entity_recall",
+        "numeral_recall",
+        "hallucination_rate",
+    ):
         assert isinstance(payload["aggregate"][name], float)
         assert set(payload["distribution"][name]) == {
             "mean",
@@ -99,8 +113,16 @@ def test_skip_judge_makes_no_network_request_and_writes_six_fields(
         "max",
     }
     assert payload["distribution"]["copy_ratio"]["mean"] == 1.0
+    assert payload["distribution"]["profile_gap"] is None
+    assert isinstance(payload["aggregate"]["profile_gap"], float)
+    assert isinstance(payload["aggregate"]["profile_gap_per_case"], float)
+    assert list(payload["profile_mean_delta"]) == list(FEATURE_NAMES)
+    assert list(payload["vernacular_input"]["profile_mean_delta"]) == list(FEATURE_NAMES)
+    assert isinstance(payload["vernacular_input"]["profile_gap"], float)
+    assert isinstance(payload["vernacular_input"]["profile_gap_per_case"], float)
     for case in payload["per_case"]:
         assert case["output_hash"].startswith("sha256:")
+        assert isinstance(case["metrics"]["profile_gap_per_case"], float)
         assert case["metrics"]["copy_ratio"] == 1.0
         assert "output" not in case
         assert "original" not in case
@@ -243,6 +265,79 @@ def test_split_filter_keeps_only_matching_cases(tmp_path: Path) -> None:
     )
     assert report.n_cases == 1
     assert [case.id for case in report.per_case] == ["b"]
+    assert report.aggregate["profile_gap"] == pytest.approx(0.0)
+    assert report.aggregate["profile_gap_per_case"] == pytest.approx(0.0)
+    assert report.per_case[0].metrics["profile_gap_per_case"] == pytest.approx(0.0)
+
+
+def _hand_config(tmp_path: Path, rows: list[dict[str, str]]) -> EvalConfig:
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text(
+        "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+    return load_config(Path("eval/configs/baseline.yaml")).model_copy(update={"cases": str(cases)})
+
+
+def test_profile_fields_are_null_without_ground_truth(tmp_path: Path) -> None:
+    config = _hand_config(
+        tmp_path,
+        [{"id": "h1", "vernacular": "今天下雨。", "original": ""}],
+    )
+    generations = tmp_path / "generations.jsonl"
+    generations.write_text(
+        json.dumps({"id": "h1", "output": "雨还在下。"}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    report = evaluate(
+        config,
+        generations,
+        "no-original",
+        skip_judge=True,
+        report_path=tmp_path / "report.json",
+        cache_dir=tmp_path / "cache",
+    )
+    assert report.aggregate["profile_gap"] is None
+    assert report.aggregate["profile_gap_per_case"] is None
+    assert report.distribution["profile_gap"] is None
+    assert report.distribution["profile_gap_per_case"] is None
+    assert report.profile_mean_delta is None
+    assert report.vernacular_input.profile_gap is None
+    assert report.vernacular_input.profile_gap_per_case is None
+    assert report.vernacular_input.profile_mean_delta is None
+    assert report.per_case[0].metrics["profile_gap_per_case"] is None
+    assert isinstance(report.aggregate["style_distance"], float)
+
+
+def test_mixed_originals_are_rejected(tmp_path: Path) -> None:
+    config = _hand_config(
+        tmp_path,
+        [
+            {"id": "a", "vernacular": "今天下雨。", "original": "雨落了一日。"},
+            {"id": "b", "vernacular": "他去了码头。", "original": ""},
+        ],
+    )
+    generations = tmp_path / "generations.jsonl"
+    generations.write_text(
+        "\n".join(
+            json.dumps(row, ensure_ascii=False)
+            for row in (
+                {"id": "a", "output": "雨落了一日。"},
+                {"id": "b", "output": "他去了码头。"},
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="一部分有原文"):
+        evaluate(
+            config,
+            generations,
+            "mixed",
+            skip_judge=True,
+            report_path=tmp_path / "report.json",
+            cache_dir=tmp_path / "cache",
+        )
 
 
 def test_unknown_split_is_an_error(tmp_path: Path) -> None:

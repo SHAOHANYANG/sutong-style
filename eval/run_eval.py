@@ -26,13 +26,17 @@ from eval.judge import (
     style_win_rate,
     vote_tally,
 )
+from eval.metrics import profile_gap, profile_gap_per_case, signed_mean_delta
 from scripts.vernacularize import text_similarity
 from stylometry.distance import StyleReference
+from stylometry.features import FEATURE_NAMES
 from stylometry.lexicon import LiteraryLexicon
 
 LOGGER = structlog.get_logger()
 AGGREGATE_FIELDS = (
     "style_distance",
+    "profile_gap",
+    "profile_gap_per_case",
     "entity_recall",
     "numeral_recall",
     "hallucination_rate",
@@ -62,7 +66,7 @@ class EvalConfig(BaseModel):
 class EvalCase(BaseModel):
     id: str
     vernacular: str
-    original: str
+    original: str = ""
     split: str | None = None
 
 
@@ -80,6 +84,14 @@ class CaseReport(BaseModel):
     output_hash: str
 
 
+class VernacularProfile(BaseModel):
+    """The unchanged vernacular input, scored against the same originals."""
+
+    profile_gap: float | None
+    profile_gap_per_case: float | None
+    profile_mean_delta: dict[str, float] | None
+
+
 class EvalReport(BaseModel):
     run_id: str
     timestamp: str
@@ -89,6 +101,8 @@ class EvalReport(BaseModel):
     n_cases: int
     aggregate: dict[str, float | None]
     distribution: dict[str, dict[str, float | int] | None]
+    profile_mean_delta: dict[str, float] | None
+    vernacular_input: VernacularProfile
     per_case: list[CaseReport] = Field(default_factory=list)
 
 
@@ -137,6 +151,38 @@ def load_gazetteer(path: Path) -> set[str]:
 
 def output_hash(text: str) -> str:
     return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _has_original(case: EvalCase) -> bool:
+    return bool(case.original.strip())
+
+
+def _mean_delta_map(deltas: np.ndarray) -> dict[str, float]:
+    signed = signed_mean_delta(deltas)
+    if signed.shape != (len(FEATURE_NAMES),):
+        raise ValueError(f"逐维均值差长度应为 {len(FEATURE_NAMES)}")
+    return {name: float(signed[index]) for index, name in enumerate(FEATURE_NAMES)}
+
+
+def _profile(
+    reference: StyleReference, outputs: list[str], originals: list[str]
+) -> tuple[float, list[float], dict[str, float], dict[str, float | int]]:
+    deltas = np.vstack(
+        [
+            reference.zscore(output) - reference.zscore(original)
+            for output, original in zip(outputs, originals, strict=True)
+        ]
+    )
+    per_case = [float(value) for value in profile_gap_per_case(deltas)]
+    return profile_gap(deltas), per_case, _mean_delta_map(deltas), summarize(per_case)
+
+
+def _empty_vernacular() -> VernacularProfile:
+    return VernacularProfile(
+        profile_gap=None,
+        profile_gap_per_case=None,
+        profile_mean_delta=None,
+    )
 
 
 def summarize(values: list[float]) -> dict[str, float | int]:
@@ -205,6 +251,35 @@ def evaluate(
     if not skip_judge and judge is None:
         judge = build_judge_completer(model)
 
+    grounded = [_has_original(case) for case in cases]
+    if any(grounded) and not all(grounded):
+        raise ValueError("同一批样本里只有一部分有原文，profile_gap 不能按子集计算")
+    originals = [case.original for case in cases]
+    case_gaps: list[float | None] = []
+    if all(grounded):
+        set_gap, raw_gaps, profile_mean_delta, gap_summary = _profile(
+            reference,
+            [generations[case.id].output for case in cases],
+            originals,
+        )
+        case_gaps.extend(raw_gaps)
+        vernacular_gap, _, vernacular_delta, vernacular_summary = _profile(
+            reference,
+            [case.vernacular for case in cases],
+            originals,
+        )
+        vernacular_input = VernacularProfile(
+            profile_gap=vernacular_gap,
+            profile_gap_per_case=float(vernacular_summary["mean"]),
+            profile_mean_delta=vernacular_delta,
+        )
+    else:
+        set_gap = None
+        case_gaps.extend([None] * len(cases))
+        profile_mean_delta = None
+        gap_summary = None
+        vernacular_input = _empty_vernacular()
+
     per_case: list[CaseReport] = []
     distances: list[float] = []
     entities: list[float] = []
@@ -212,7 +287,7 @@ def evaluate(
     hallucinations: list[float] = []
     copy_ratios: list[float] = []
     outcomes: list[Outcome] = []
-    for case in cases:
+    for index, case in enumerate(cases):
         generation = generations[case.id]
         report = assess(case.vernacular, generation.output, gazetteer)
         distance = reference.distance(generation.output)
@@ -231,6 +306,7 @@ def evaluate(
             outcomes.append(outcome)
         metrics: dict[str, float | None] = {
             "style_distance": distance,
+            "profile_gap_per_case": case_gaps[index],
             "entity_recall": report.entity_recall,
             "numeral_recall": report.numeral_recall,
             "hallucination_rate": report.hallucination_rate,
@@ -249,8 +325,11 @@ def evaluate(
 
     win_rate = style_win_rate(outcomes) if outcomes else None
     copy_summary = summarize(copy_ratios)
+    per_case_gap_mean = None if gap_summary is None else gap_summary["mean"]
     measured: dict[str, float | None] = {
         "style_distance": summarize(distances)["mean"],
+        "profile_gap": set_gap,
+        "profile_gap_per_case": None if per_case_gap_mean is None else float(per_case_gap_mean),
         "entity_recall": summarize(entities)["mean"],
         "numeral_recall": summarize(numerals)["mean"],
         "hallucination_rate": summarize(hallucinations)["mean"],
@@ -261,6 +340,8 @@ def evaluate(
     aggregate = {name: measured[name] for name in AGGREGATE_FIELDS}
     distribution: dict[str, dict[str, float | int] | None] = {
         "style_distance": summarize(distances),
+        "profile_gap": None,
+        "profile_gap_per_case": gap_summary,
         "entity_recall": summarize(entities),
         "numeral_recall": summarize(numerals),
         "hallucination_rate": summarize(hallucinations),
@@ -284,6 +365,8 @@ def evaluate(
         n_cases=len(cases),
         aggregate=aggregate,
         distribution=distribution,
+        profile_mean_delta=profile_mean_delta,
+        vernacular_input=vernacular_input,
         per_case=per_case,
     )
     report_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,26 @@
 # QUESTIONS
 
+## Q21 — profile_gap 报告字段与缺原文时的行为（2026-10-06，按假设实现）
+
+**问题**
+T0.4 补丁写死了两个口径的算法，没有写报告里逐维均值差和白话参照的字段名，
+集合级指标在 `distribution` 里放什么，以及同一批样本里只有一部分有原文时怎么办。
+`StyleReference` 上那个被 `distance()` 复用的标准化方法也没有指定名字。
+
+**假设**
+标准化方法叫 `zscore`。`distance()` 只对它的结果取范数再除以 √20。
+系统输出的逐维带符号均值差放在报告顶层 `profile_mean_delta`，键顺序等于 `FEATURE_NAMES`。
+白话输入参照放在 `vernacular_input`，内含 `profile_gap`、`profile_gap_per_case`、`profile_mean_delta`。
+`distribution.profile_gap` 记 null：集合级没有逐条序列，做不出和其他指标一样的分布。
+`distribution.profile_gap_per_case` 用同一套 mean / std / median / q1 / q3 / min / max。
+`profile_gap_per_case()` 返回逐条标量数组；聚合均值走 `summarize` 的 mean，和分布里的 mean 是同一个数。
+一条样本算有原文，当且仅当 `original` 去掉空白后非空。全部有原文才计算；全部没有则上述字段为 null，不报 0。
+有的有、有的没有，抛 `ValueError`，不按有原文的子集悄悄算。
+
+**影响范围**
+`human_eval.jsonl` 没有 `original` 字段，按「全部没有原文」处理。
+字段名如果以后要改，两份已提交的 eval 报告要一起改，不能只改代码。
+
 ## Q20 — dense 缓存核对范围、max_length 与建索引默认池（2026-10-06，按假设实现）
 
 **问题**

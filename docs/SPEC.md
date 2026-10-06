@@ -522,7 +522,8 @@ class StyleReference:
 | 指标 | 类型 | 方向 | 能否进 CI / agent 环 |
 |---|---|---|---|
 | `style_distance` | 确定性 | **趋近 1.0**，不是越低越好 | 可以（弱信号） |
-| `profile_gap` | 确定性 | 越低越好 | 可以，但需 ground truth |
+| `profile_gap` | 确定性，集合级 | 越低越好 | 不能进 agent 环（没有单条的值） |
+| `profile_gap_per_case` | 确定性，逐条 | 越低越好 | 可以，但需 ground truth |
 | `entity_recall` | 确定性 | 越高越好 | 可以 |
 | `numeral_recall` | 确定性 | 越高越好 | 可以 |
 | `hallucination_rate` | 确定性 | 越低越好 | 可以 |
@@ -535,7 +536,13 @@ class StyleReference:
 - 低于 1.0 不代表更好，代表**向语料均值回归**，方差小于真人
 - 白话输入实测 0.992，几乎正中靶心，但其特征剖面与原文相差 0.450。标量把「离质心多远」与「往哪个方向偏」压成了一个数，**无法区分「完全没改」与「改得完美」**
 
-所以 `style_distance` 此后只作弱信号。判别力由 `profile_gap` 承担：逐条输出的 20 维剖面与**该条自己的原文**剖面之间的平均 |z| 差。它需要 ground truth，故 `human_eval` 的 10 条只能退回 `style_distance`，这是该集合的已知局限。
+所以 `style_distance` 此后只作弱信号。判别要看剖面差，而且有两种不能混用的口径。记 z(text) 为 `StyleReference.zscore` 用参照的 mean / std 标准化后的 20 维向量，`distance()` 复用同一次标准化。d_i = z(第 i 条输出) − z(第 i 条自己的原文)。
+
+`profile_gap` 是集合级：先对全部样本求 d 的逐维均值，再对 20 维取绝对值求平均。方向相反的误差会在求均值时互相抵消，所以它量的是整批样本的系统性偏差，不是每一条像不像自己的原文。已发表的白话 0.450、base 0.494、LoRA 0.204 就是这个算法，不要换成逐条算法。它没有单条的值，进不了 agent 环。
+
+`profile_gap_per_case` 是逐条：每条样本对 |d_i| 的 20 维求平均，得到一个标量；聚合值是这些标量的均值。同一批 59 条上，白话 0.623、base 0.748、LoRA 0.514。集合级从 0.450 到 0.204 是缩了一半还多，逐条只是 0.623 到 0.514。它可以进 agent 环，但需要该条自己的原文。`human_eval` 没有原文，两项都记 null，不报 0。
+
+报告里的 `profile_mean_delta` 是 d 的逐维均值，带符号。文档引用分维数字时从这里取。
 
 `ppl` 用不带 adapter 的基座算。注意风格化文本的 PPL 天然偏高，**它只用来抓明显崩坏，不作主指标**。
 
@@ -600,6 +607,8 @@ hallucination_rate = |E_out \ E_in| / |E_out|       # E_out 为空时记 0.0
   "n_cases": 73,
   "aggregate": {
     "style_distance": 0.0,
+    "profile_gap": 0.0,
+    "profile_gap_per_case": 0.0,
     "entity_recall": 0.0,
     "numeral_recall": 0.0,
     "hallucination_rate": 0.0,
@@ -607,11 +616,19 @@ hallucination_rate = |E_out \ E_in| / |E_out|       # E_out 为空时记 0.0
     "copy_ratio": 0.0,
     "ppl": null
   },
+  "profile_mean_delta": null,
+  "vernacular_input": {
+    "profile_gap": null,
+    "profile_gap_per_case": null,
+    "profile_mean_delta": null
+  },
   "per_case": [
     {"id": "妻妾成群_0049", "metrics": {}, "output_hash": "sha256:..."}
   ]
 }
 ```
+
+有原文时，`profile_gap` 与 `profile_gap_per_case` 是数，`profile_mean_delta` 是恰好 20 个键的对象，键名与顺序等于 `FEATURE_NAMES`，值是 d 的逐维均值。`vernacular_input` 把白话输入当作什么都没改的系统，算同样的三项。`distribution.profile_gap` 始终为 null，因为集合级没有逐条序列；`distribution.profile_gap_per_case` 与其他逐条指标一样，有 mean、std、median、q1、q3、min、max。`per_case.metrics` 含 `profile_gap_per_case`。没有原文时这几项全部为 null，不报 0。`--skip-judge` 时照常计算。
 
 `per_case` 里**只存 hash 不存全文**（版权）。全文留在 `corpus/generations/`，不提交。
 

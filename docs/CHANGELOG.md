@@ -4,6 +4,22 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-06 EDT profile_gap 口径更正（T0.4 补丁）
+
+`profile_gap` 此前只有手填数字，代码和 `eval/reports/` 里都没有这个字段。文档把它写成「逐条平均 |z| 差」，已发表的 0.450 / 0.494 / 0.204 实际是另一种算法。
+
+两种口径现在都有实现，模型权重和生成结果都没变，这不是改善也不是恶化：
+
+| | profile_gap（集合级） | profile_gap_per_case（逐条） | sent_len_p90 | sent_len_std |
+|---|---|---|---|---|
+| 白话输入 | 0.450 | 0.623 | -0.61 | -0.58 |
+| base | 0.494 | 0.748 | -0.62 | -0.63 |
+| LoRA | 0.204 | 0.514 | -0.61 | -0.50 |
+
+集合级先对样本求逐维均值再取绝对值，方向相反的误差会抵消。「缩了一半还多」只对 0.450 → 0.204 成立。逐条是每一条与自己原文的平均 |z| 差，再对样本求均值，0.623 → 0.514。
+
+原先写的分维数字 `sent_len_p90` -0.64 → -0.64、`sent_len_std` -0.70 → -0.62 用现有 lexicon 和 style_reference 复现不出来。上表是报告里 `profile_mean_delta` 的值。
+
 ## 2026-10-06 EDT T1.2 dense 语义召回
 
 内存里做余弦，不接 pgvector，也不装 FlagEmbedding。bge-m3 的 dense 向量用 transformers 取最后一层 CLS，再 L2 归一化；索引内部还会再归一化一次。
@@ -29,7 +45,7 @@ SPEC 4.1 写明索引池只能用 `split=train` 的 chunk，eval 原文不得进
 
 **loss 曲线。** train 1.36 → 0.78；eval 0.9808（epoch 1）→ 0.9881（epoch 2 回升）。与 v1 的 train 2.726 → 1.936、eval 2.169 → 2.056 → 2.089 **形状一致、绝对值不可比**（掩码方式不同 + 白话侧已全部重新生成）。v2 的 eval 在 epoch 1 即触底，早于 v1 的 1.9；仅记录，不据此改 epoch 数。
 
-**基线数字（59 条 eval，贪心解码，seed 42）。**
+**基线数字（59 条 eval，贪心解码，seed 42）。** 下列 `profile_gap` 与分维数字的口径见 2026-10-06「profile_gap 口径更正」，本段正文保留原样。
 
 | | style_distance | profile_gap | entity_recall | numeral_recall | hallucination_rate | copy_ratio |
 |---|---|---|---|---|---|---|
