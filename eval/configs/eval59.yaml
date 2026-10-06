@@ -1,0 +1,14 @@
+# 真实基线配置：corpus/pairs.jsonl 的 59 条 eval 切片。
+# baseline.yaml 是 5 条公开样例的冒烟配置，两份都保留，不要互相覆盖。
+# pairs.jsonl 不进 git（版权），所以这份配置只能在有语料的机器上跑。
+pipeline: baseline
+model: unknown
+seed: 42
+cases: corpus/pairs.jsonl
+split: eval
+style_reference: stylometry/data/style_reference.json
+lexicon: stylometry/data/lexicon.json
+gazetteer: corpus/gazetteer.json
+judge_model: deepseek-v4-pro
+judge_prompt: eval/prompts/pairwise_judge.txt
+opponent: vernacular

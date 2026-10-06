@@ -4,6 +4,38 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-05 EDT T0.5 训练与基线（Phase 0 出口）
+
+**训练完成。** `sutong-v2`，Qwen2.5-3B-Instruct + LoRA r=16，743 条训练对，2 epochs，12 分 39 秒，RTX 5060 Laptop (sm_120) / WSL2。可训练参数实测 29,933,568，与 v1 日志一字不差——这从加载的真实模型数出，独立证实 v1 用的是 r=16 而非 SPEC 原记录的 r=32，见 SPEC 1.2 的更正段。最长样本 806 token，`max_seq_length=1536`，零截断。
+
+**loss 曲线。** train 1.36 → 0.78；eval 0.9808（epoch 1）→ 0.9881（epoch 2 回升）。与 v1 的 train 2.726 → 1.936、eval 2.169 → 2.056 → 2.089 **形状一致、绝对值不可比**（掩码方式不同 + 白话侧已全部重新生成）。v2 的 eval 在 epoch 1 即触底，早于 v1 的 1.9；仅记录，不据此改 epoch 数。
+
+**基线数字（59 条 eval，贪心解码，seed 42）。**
+
+| | style_distance | profile_gap | entity_recall | numeral_recall | hallucination_rate | copy_ratio |
+|---|---|---|---|---|---|---|
+| base | 1.149 | 0.494 | 0.958 | 0.923 | 0.0042 | 0.875 |
+| LoRA | 0.923 | **0.204** | **1.000** | 0.861 | 0.0141 | 0.709 |
+| 原文 | 1.035 | 0 | — | — | — | — |
+| 白话输入 | 0.992 | 0.450 | — | — | — | — |
+
+微调把特征剖面差距从 0.450 压到 0.204，base 反而恶化到 0.494；`entity_recall` 到满分。代价是**事实漂移**：`numeral_recall` 0.923 → 0.861，`hallucination_rate` 0.0042 → 0.0141。这正是 README 列为「已知缺陷 #1」的现象，首次量化。Phase 1 与 Phase 2 的靶子即此两项。
+
+**一个具体的失败。** `sent_len_p90` 与 `sent_len_std` 两维几乎没动（-0.64 → -0.64、-0.70 → -0.62）。模型学会了书面语词、文言虚词与标点密度，**没学会句长节奏**。
+
+**负结果：`style_distance` 的方向标此前写反了。** 它是 z 分数均方根，期望值 1.0 而非 0；原文实测 1.035。LoRA 的 0.923 低于原文 = 向均值回归。白话输入 0.992 几乎正中靶心却与原文剖面差 0.450——标量把半径与方向压成一个数，分不开「没改」与「改好了」。此后降为弱信号，判别改用 `profile_gap`。见 SPEC 3.1 更正段。
+
+**负结果：`style_win_rate` 这一轮不可引用。** 59 条、118 次调用（= 59 × 2，位置互换全部发出）、零解析失败、模型身份闸门确认响应为 `deepseek-v4-pro`——**judge 链路首次对真实 API 验证通过**。但 `tie_rate = 0.49`：近一半样本在 A/B 互换后评委改口。判得一致的 30 条中 25:5 偏向白话，与 `profile_gap` 方向相反。输出非退化（59 条中仅 3 条有轻微重复或缺末尾标点）。最可能原因是 **Q18 的对手选择有混淆**：白话由 LLM 从原文降级改写而来，内容与叙事顺序几乎原样保留，评委虽被要求只判文风，仍大概率在响应内容相似度。对手选择需重做。
+
+**踩的坑。**
+
+1. `torchvision` 从 PyPI 默认源装会是 CPU 版，`import unsloth` 报 `operator torchvision::nms does not exist`。必须从 cu128 源重装成 `0.26.0+cu128`。
+2. TRL 0.24.0 改了 API：`SFTConfig(max_seq_length=)` → `max_length=`，`SFTTrainer(tokenizer=)` → `processing_class=`。`unsloth` 必须在 `trl`/`transformers`/`peft` 之前 import，否则补丁不生效。
+3. 后台命令结尾加 `| tail -N` 会让退出码变成 `tail` 的——脚本崩了仍报 exit 0。第一次训练失败因此被误判为成功。
+4. `.env` 里的 `JUDGE_MODEL` 与 `VERNACULARIZE_MODEL` 仍是废别名 `deepseek-chat`。按既有记录不静默修改用户配置，本次运行在命令行显式覆盖。待所有者自行更新。
+
+**新增。** `scripts/train.py`、`scripts/generate.py`（共用 `build_messages()`，训练与推理的 prompt 必须同源）、`eval/configs/eval59.yaml`、`EvalConfig.split` 过滤（避免把受版权保护的原文再复制一份出来）。
+
 ## 2026-10-05 EDT T0.4 评估编排
 
 `eval/judge.py` 做配对比较：每个样本 A/B 互换各问一次，两次不一致记平局。

@@ -10,12 +10,24 @@
 
 <!-- TODO(T0.5/T1.6/T2.5): 每阶段填一行真实数字，不要留占位符 -->
 
-| pipeline | style_distance ↓ | entity_recall ↑ | numeral_recall ↑ | hallucination_rate ↓ | style_win_rate ↑ |
-|---|---|---|---|---|---|
-| base（Qwen2.5-3B 无微调） | — | — | — | — | — |
-| + LoRA 微调 | — | — | — | — | — |
-| + 风格范例检索 | — | — | — | — | — |
-| + 自检重写环 | — | — | — | — | — |
+59 条 eval 切片，贪心解码，seed 42。`style_win_rate` 的对手是白话输入（SPEC Q18）。
+
+| pipeline | style_distance → 1.0 | profile_gap ↓ | entity_recall ↑ | numeral_recall ↑ | hallucination_rate ↓ | copy_ratio | style_win_rate ↑ | tie_rate |
+|---|---|---|---|---|---|---|---|---|
+| base（Qwen2.5-3B 无微调） | 1.149 | 0.494 | 0.958 | 0.923 | 0.0042 | 0.875 | — | — |
+| + LoRA 微调（sutong-v2） | 0.923 | **0.204** | **1.000** | 0.861 | 0.0141 | 0.709 | 0.331 | **0.49** |
+| + 风格范例检索 | — | — | — | — | — | — | — | — |
+| + 自检重写环 | — | — | — | — | — | — | — | — |
+| *参照：苏童原文* | *1.035* | *0* | — | — | — | — | — | — |
+| *参照：白话输入* | *0.992* | *0.450* | — | — | — | — | — | — |
+
+**这张表要对着两行参照读，不要只看升降。**
+
+- `style_distance` 是 20 维 z 分数的均方根，**目标是 1.0 不是 0**。真苏童原文得 1.035，正是理论期望值。LoRA 的 0.923 低于原文，意思是它写得「比苏童更平均苏童」——向语料均值回归，方差比真人小。而白话输入本身就有 0.992，所以这个标量**分不开「完全没改」和「改得完美」**，只能当弱信号。
+- `profile_gap` 是逐条输出的 20 维特征剖面与**该条自己的原文**剖面的平均 \|z\| 差。这是真正有判别力的量：白话 0.450 → LoRA 0.204，base 反而恶化到 0.494。`human_eval` 没有 ground truth，算不了这一列。
+- `style_win_rate` 这一轮**不可单独引用**：`tie_rate = 0.49`，A/B 位置对调后评委有一半改口。详见下方「已知局限」。
+
+一个具体的失败：`sent_len_p90` 与 `sent_len_std` 两维几乎没动（-0.64 → -0.64、-0.70 → -0.62）。模型学会了用词、虚词和标点，**没学会苏童的句长节奏**。
 
 指标定义见 [SPEC 3.1](docs/SPEC.md#31-指标清单)。填写 `style_win_rate` 时必须同时标注 `tie_rate` 和 `copy_ratio`。`tie_rate` 只在 `identical_rate` 低时才表示位置偏差；`copy_ratio` 高而 `tie_rate` 高是模型在抄，不是评委失效。定义见 [SPEC 3.3](docs/SPEC.md#33-风格胜率llm-judge)。
 
@@ -49,6 +61,49 @@
 ### 离线评估与在线 reward 用不同精度的指标
 
 LLM judge 准但慢，一轮几秒、三轮超时，所以它只能离线用。agent 环内只允许确定性指标（规则化的保真校验 + 文体距离）。这个分层是整套设计的核心取舍。
+
+## 在 GPU 机器上复现训练
+
+实测环境：Windows 11 + WSL2 Ubuntu 24.04，RTX 5060 Laptop 8GB（Blackwell sm_120）。
+
+```bash
+# 1. 环境放 WSL 本地盘，不要放 /mnt/，venv 有上万个小文件，跨文件系统慢十倍
+uv venv --python 3.11 ~/venvs/sutong
+
+# 2. torch 必须走 cu128 源，sm_120 需要 CUDA 12.8+
+VIRTUAL_ENV=~/venvs/sutong uv pip install torch --index-url https://download.pytorch.org/whl/cu128
+VIRTUAL_ENV=~/venvs/sutong uv pip install unsloth trl datasets structlog pydantic
+
+# 3. 坑：torchvision 会从 PyPI 装成 CPU 版，import unsloth 时报
+#    "operator torchvision::nms does not exist"。必须从 cu128 源重装
+VIRTUAL_ENV=~/venvs/sutong uv pip install --reinstall --no-deps \
+  --index-url https://download.pytorch.org/whl/cu128 "torchvision==0.26.0"
+
+# 4. 验证：必须打印 (12, 0)
+~/venvs/sutong/bin/python -c "import torch; print(torch.cuda.get_device_capability(0))"
+```
+
+验证过的版本组合：`torch 2.11.0+cu128` / `torchvision 0.26.0+cu128` / `unsloth 2026.9.14` / `xformers 0.0.35` / `triton 3.6.0` / `trl 0.24.0`。
+
+**TRL 0.24.0 的 API 与旧教程不同**：`SFTConfig` 用 `max_length` 不是 `max_seq_length`，`SFTTrainer` 用 `processing_class` 不是 `tokenizer`，且 `unsloth` 必须在 `trl` / `transformers` / `peft` 之前 import。
+
+```bash
+# 不碰 GPU，只核对超参和数据切分
+uv run python -m scripts.train --dry-run
+
+# 训练（12 分 39 秒 / RTX 5060 Laptop）。启动即断言可训练参数 == 29,933,568
+python -m scripts.train --run-id sutong-v2
+
+# 生成：不给 --adapter 就是无微调基座
+python -m scripts.generate --run-id base-eval59
+python -m scripts.generate --run-id lora-eval59 --adapter adapters/sutong-v2/adapter
+
+# 评估：--skip-judge 不发任何网络请求
+uv run python -m eval.run_eval --config eval/configs/eval59.yaml \
+  --generations corpus/generations/lora-eval59.jsonl --run-id lora-eval59 --skip-judge
+```
+
+`scripts/train.py` 与 `scripts/generate.py` 共用同一个 `build_messages()`。**训练与推理的 prompt 必须同源**，差一个 token 则 adapter 失效。
 
 ## Quickstart
 
@@ -120,6 +175,8 @@ uv run python -m scripts.two_pass_preview
 - 两段式事实修补由同一个模型完成，问题清单不是独立保真证据；助手抽查不得冒称人工review。六条固定分层抽查不代表总体，人工review仍待完成
 - 托管 API 若只公开模型别名，日期、采样参数和响应标识仍不足以锁定不可变底座快照；报告明确保留这一缺失。jieba 专名与对白密度也是启发式估计，需要人工核对
 - 2025-08 白话生成模型未知；2026-10-03 的留一法、round1、round2 均**在 deepseek-flash 上得到**（请求 deepseek-chat 被别名重映射），不能当作 deepseek-chat 的结果。跨模型参照的不确定性比此前更大，不能单凭表层分数推断 prompt 或模型的因果作用
+- **`style_distance` 的方向标此前写反了。** 它是 z 分数均方根，一条服从参照分布的文本期望值就是 1.0；59 条原文实测 1.035，与理论吻合。低于 1.0 不代表更好，代表向均值回归。白话输入 0.992 几乎正中靶心却与原文剖面相差 0.450，说明标量半径与方向被混成了一个数。此后 `style_distance` 只作弱信号，判别以 `profile_gap` 为准；`human_eval` 无 ground truth，只能退回标量
+- **2026-10-05 的 `style_win_rate` 0.331 不可单独引用。** 59 条、118 次调用、零解析失败，模型身份闸门确认响应为 `deepseek-v4-pro`，链路本身是通的。但 `tie_rate = 0.49`——近一半样本在 A/B 位置互换后评委改口，这一半是掷骰子。判得一致的 30 条里 25:5 偏向白话，与确定性指标（profile_gap 0.450 → 0.204）方向相反。输出本身不是退化：59 条中仅 3 条有轻微重复或缺末尾标点。最可能的原因是 **Q18 选定的对手有混淆**——白话是用 LLM 从原文降级改写而来，内容、意象与叙事顺序几乎原样保留，评委虽被明确要求只判文风，仍大概率在响应「内容像不像」。对手选择需要重做，不是模型问题
 - 语义级漂移抓不到。规则化校验能抓实体、数字、称谓的替换，但抓不到「垂死的酸气」被写成「死尸散发的酸臭之气」这类语义扭曲（人还活着）
 - `human_eval.jsonl` 的 30 条人工白话没有 ground truth，只能评风格距离与幻觉率，不能算 recall
 - 域外泛化只缓解未解决。根因在训练数据分布，彻底解决需要补一批人类撰写的白话输入重训

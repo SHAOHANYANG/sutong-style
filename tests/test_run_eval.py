@@ -199,3 +199,62 @@ def test_judge_client_refuses_a_missing_key(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     with pytest.raises(ValueError, match="LLM_API_KEY"):
         build_judge_completer("deepseek-v4-pro")
+
+
+def test_split_filter_keeps_only_matching_cases(tmp_path: Path) -> None:
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text(
+        "\n".join(
+            json.dumps(row, ensure_ascii=False)
+            for row in (
+                {
+                    "id": "a",
+                    "vernacular": "甲去了苏州，带了3本书。",
+                    "original": "甲赴苏州，携书三。",
+                    "split": "train",
+                },
+                {
+                    "id": "b",
+                    "vernacular": "乙在南京住了5年。",
+                    "original": "乙居南京五载。",
+                    "split": "eval",
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    config = load_config(Path("eval/configs/baseline.yaml")).model_copy(
+        update={"cases": str(cases), "split": "eval"}
+    )
+    generations = tmp_path / "generations.jsonl"
+    generations.write_text(
+        json.dumps({"id": "b", "model": "fake", "output": "乙居南京五载。"}, ensure_ascii=False)
+        + "\n",
+        encoding="utf-8",
+    )
+    report = evaluate(
+        config,
+        generations,
+        "split-filter",
+        skip_judge=True,
+        report_path=tmp_path / "report.json",
+        cache_dir=tmp_path / "cache",
+    )
+    assert report.n_cases == 1
+    assert [case.id for case in report.per_case] == ["b"]
+
+
+def test_unknown_split_is_an_error(tmp_path: Path) -> None:
+    config = load_config(Path("eval/configs/baseline.yaml")).model_copy(update={"split": "nope"})
+    generations = tmp_path / "generations.jsonl"
+    generations.write_text("", encoding="utf-8")
+    with pytest.raises(ValueError, match="nope"):
+        evaluate(
+            config,
+            generations,
+            "bad-split",
+            skip_judge=True,
+            report_path=tmp_path / "report.json",
+            cache_dir=tmp_path / "cache",
+        )

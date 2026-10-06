@@ -55,12 +55,15 @@ class EvalConfig(BaseModel):
     judge_model: str
     judge_prompt: str
     opponent: Literal["vernacular"]
+    split: str | None = None
+    """Keep only cases whose split matches. None evaluates the whole file."""
 
 
 class EvalCase(BaseModel):
     id: str
     vernacular: str
     original: str
+    split: str | None = None
 
 
 class Generation(BaseModel):
@@ -185,6 +188,10 @@ def evaluate(
 ) -> EvalReport:
     """Score every case. Missing generations are an error, not a silent drop."""
     cases = load_cases(Path(config.cases))
+    if config.split is not None:
+        cases = [case for case in cases if case.split == config.split]
+        if not cases:
+            raise ValueError(f"{config.cases} 里没有 split == {config.split!r} 的样本")
     generations = load_generations(generations_path)
     missing = [case.id for case in cases if case.id not in generations]
     if missing:
