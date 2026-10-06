@@ -4,6 +4,19 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-06 EDT T1.1 BM25 稀疏召回
+
+`retrieval/bm25.py` 用私有 jieba 分词器对调用方传入的原文做内存索引，查询是白话。
+不读 `pairs.jsonl` / `chunks.jsonl`，不写 pickle。k1/b/epsilon 用 `rank_bm25.BM25Okapi` 的默认值，没有检索评估集，不调参。
+`Document` 和 `Hit` 放在 `retrieval/types.py`，给后面的 RRF 用。dense / style / fusion 没做。
+
+停用词表 `retrieval/data/stopwords.txt` 共 215 条，是本仓库自行整理的中文虚词、代词、连词、助词、语气词和中英文标点。
+不是从哈工大停用词表、百度停用词表、stopwords-iso 或其他公开词表复制的，没有第三方许可证，随仓库按项目代码同一方式分发。
+人名、地名、称谓和数词不在表里。
+
+`sample_public.jsonl` 的查询只用于单测冒烟，确认链路能跑通。不把它报成 recall@k 或检索质量。SPEC 4.3 的送分题仍然成立。
+SPEC 4.1 写明索引池只能用 `split=train` 的 chunk，eval 原文不得进索引；具体用哪个 train 子集待定。
+
 ## 2026-10-05 EDT T0.5 训练与基线（Phase 0 出口）
 
 **训练完成。** `sutong-v2`，Qwen2.5-3B-Instruct + LoRA r=16，743 条训练对，2 epochs，12 分 39 秒，RTX 5060 Laptop (sm_120) / WSL2。可训练参数实测 29,933,568，与 v1 日志一字不差——这从加载的真实模型数出，独立证实 v1 用的是 r=16 而非 SPEC 原记录的 r=32，见 SPEC 1.2 的更正段。最长样本 806 token，`max_seq_length=1536`，零截断。

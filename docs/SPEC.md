@@ -644,6 +644,11 @@ T0.4 完成后，下表必须有真实数字填进 `README.md`：
 
 索引对象是 `original` 文本——范例要给模型看的是原文，不是白话。
 
+检索索引池只允许包含 `corpus/split.json` 里 `split=train` 的 chunk。
+eval 的 original 是评估的 ground truth，进了索引就等于把答案当范例给模型看。
+查询来自训练集时，须用 `exclude_ids` 排除该条自己的 original。
+索引池具体取哪个 train 子集待定，由仓库所有者在 T1.5 前决定。
+
 style 路为什么不用向量库：907 条 × 20 维，暴力算是微秒级，上向量库纯属负担。
 
 ### 4.2 风格向量预测

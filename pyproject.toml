@@ -11,6 +11,7 @@ core = [
     "pyyaml>=6.0.3",
     "jieba>=0.42.1",
     "numpy>=2.1",
+    "rank-bm25>=0.2.2",
     "openai>=1.51",
     "pydantic>=2.9",
     "python-dotenv>=1.0",
@@ -47,11 +48,15 @@ quote-style = "double"
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["eval", "scripts", "stylometry", "tests"]
+files = ["eval", "retrieval", "scripts", "stylometry", "tests"]
 exclude = ["corpus", ".venv", "unsloth_compiled_cache"]
 
 [[tool.mypy.overrides]]
 module = ["jieba", "jieba.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["rank_bm25", "rank_bm25.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
