@@ -1,5 +1,33 @@
 # QUESTIONS
 
+## Q20 — dense 缓存核对范围、max_length 与建索引默认池（2026-10-06，按假设实现）
+
+**问题**
+T1.2 写死了余弦、索引内 L2、不设分数阈值、缓存必须带硬闸，以及不接 pgvector、不用 FlagEmbedding。
+没有写 max_length、batch、CUDA 上的 dtype、缓存还要不要核对 revision 和 max_length、
+建索引脚本默认吃哪一个 train 子集，以及 transformers 5.5 的加载参数名。
+任务书说 pyproject 只把 `infra` 加进 mypy files。transformers 没有存根。
+
+**假设**
+max_length 默认 512，batch 默认 8。chunk 合同是 200–400 字，512 盖得住，也比 bge-m3 的 8192 省显存。
+device 不传时，有 CUDA 用 cuda 且权重用 bfloat16，否则 cpu + float32。transformers 5.5 用 `dtype=`，不用已弃用的 `torch_dtype=`。
+Windows 这次没装 transformers，这个参数名按 5.5 文档写，留到 WSL 第一次跑脚本时验证。
+模型 revision 读 `config._commit_hash`。读不到就拒绝继续，不写一个无法核对的缓存。
+加载缓存时，除了 id 顺序、文本 sha256、模型标识和维度，也核对 revision 和 max_length。
+同一模型名可以指向不同 commit，截断长度变了向量也会变。这是「API 静默换模型」那类问题的硬闸。
+元数据字段叫 `text_sha256`，不含原文。截断条数只打日志，不进元数据，也不当核对项。
+建索引脚本默认编码 `split.json` 里全部 train id 的原文，顺序跟这份列表走，eval 不进索引。
+这是 SPEC 允许的上界，不是对「具体 train 子集」的拍板。子集仍待定，要收窄就改脚本的输入，不改检索代码。
+不在 split 里的 chunk、缺失的 train id、重复 id，都抛异常，不静默丢掉。
+`FakeEmbedder` 优先用调用方注入的向量；否则用文本 sha256 前 8 字节做 numpy Generator 的种子。不碰网络和 GPU。
+查询向量非有限时抛 `ValueError`。余弦可以是负数，不设阈值。空索引的 search 不调用 embedder。
+mypy 把 `transformers` 补进已有的 GPU 栈 `ignore_missing_imports`。没有新依赖。
+
+**影响范围**
+512 若截断了超长 chunk，脚本会打 `dense_index_truncated`，缓存仍写出，max_length 记在元数据里。
+默认池是全部 train chunk，不是过内容闸门的 743 对。T1.5 之前所有者可以收窄。
+`dtype=` 如果在 5.5 的 AutoModel 上不被接受，建索引脚本会在 WSL 上失败，那时候再改，不在 Windows 上猜一个能跑的导入。
+
 ## Q19 — BM25 未写死的词频、重复 id 与停用词边界（2026-10-06，按假设实现）
 
 **问题**

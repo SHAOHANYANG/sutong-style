@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 
+import numpy as np
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
 
@@ -103,3 +105,30 @@ class FakeTwoPassGenerator:
         if self.invalid_json:
             return "非JSON，禁止重试"
         return json.dumps({"issues": [], "repaired_text": text}, ensure_ascii=False)
+
+
+class FakeEmbedder:
+    """Deterministic encoder. Injected vectors win; everything else is a text hash."""
+
+    def __init__(self, *, vectors: dict[str, np.ndarray] | None = None, dim: int = 4) -> None:
+        if dim < 1:
+            raise ValueError("dim 必须是正整数")
+        self.dim = dim
+        self.vectors: dict[str, np.ndarray] = {} if vectors is None else vectors
+        self.calls: list[list[str]] = []
+
+    def encode(self, texts: list[str]) -> np.ndarray:
+        self.calls.append(list(texts))
+        if not texts:
+            return np.zeros((0, self.dim), dtype=np.float64)
+        return np.vstack([self._row(text) for text in texts])
+
+    def _row(self, text: str) -> np.ndarray:
+        if text in self.vectors:
+            row = np.asarray(self.vectors[text], dtype=np.float64)
+            if row.shape != (self.dim,):
+                raise ValueError("FakeEmbedder 向量维度不一致")
+            return row
+        digest = hashlib.sha256(text.encode("utf-8")).digest()
+        seed = int.from_bytes(digest[:8], "big")
+        return np.random.default_rng(seed).standard_normal(self.dim)

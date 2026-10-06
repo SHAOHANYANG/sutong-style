@@ -4,6 +4,12 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-06 EDT T1.2 dense 语义召回
+
+内存里做余弦，不接 pgvector，也不装 FlagEmbedding。bge-m3 的 dense 向量用 transformers 取最后一层 CLS，再 L2 归一化；索引内部还会再归一化一次。
+缓存是 `retrieval/data/embeddings.npy` 和 `embeddings.meta.json`，两个都不进 git。加载时核对 id 顺序、文本 sha256、模型标识、revision、max_length 和维度，任何一项不一致就抛错，不静默重算。
+测试全部用 `FakeEmbedder`，没有下载模型，也没有建索引。待人工在 WSL2 执行 `python -m scripts.build_dense_index`。
+
 ## 2026-10-06 EDT T1.1 BM25 稀疏召回
 
 `retrieval/bm25.py` 用私有 jieba 分词器对调用方传入的原文做内存索引，查询是白话。

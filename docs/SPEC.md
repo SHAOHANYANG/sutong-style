@@ -637,10 +637,12 @@ T0.4 完成后，下表必须有真实数字填进 `README.md`：
 | 路 | 实现 | 查询形态 |
 |---|---|---|
 | sparse | `rank_bm25` + jieba + 中文停用词 | 输入白话文本 |
-| dense | `BAAI/bge-m3` → pgvector | 输入白话文本 |
+| dense | `BAAI/bge-m3` dense 向量，内存 numpy 余弦 | 输入白话文本 |
 | style | numpy 暴力最近邻（**不用向量库**） | 预测出的 20 维风格向量，见 4.2 |
 
 融合：`score(d) = Σ_i 1/(60 + rank_i(d))`。自己实现，约十行。
+
+dense 路本阶段不接 pgvector。Postgres 的建表与迁移是 T3.3。索引池只有 train 量级（数百条 × 1024 维），numpy 一次矩阵乘就能算完，T1.6 不必先有一个运行中的数据库。向量缓存到 `retrieval/data/embeddings.npy`，核对用的元数据在 `embeddings.meta.json`。pgvector 留到 T3.3 再迁。
 
 索引对象是 `original` 文本——范例要给模型看的是原文，不是白话。
 
@@ -792,7 +794,7 @@ CI（GitHub Actions）两个 job：
 ```
 核心     python 3.11, uv, pydantic v2, numpy, structlog
 中文     jieba, cn2an, LAC
-检索     rank_bm25, FlagEmbedding (bge-m3), scikit-learn
+检索     rank_bm25, transformers（BAAI/bge-m3 dense）, scikit-learn
 agent    langgraph                 ← 注意：不是 langchain
 服务     fastapi, sse-starlette, openai, redis, psycopg[binary], pgvector, alembic
 观测     opentelemetry-*, prometheus-fastapi-instrumentator
@@ -801,6 +803,8 @@ agent    langgraph                 ← 注意：不是 langchain
 ```
 
 版本不在本文件里钉死，由 `uv.lock` 负责。
+
+**为什么 dense 不用 FlagEmbedding**：WSL2 的 GPU 环境已经按 torch 2.11.0+cu128 / transformers 5.5.0 配通，再装 FlagEmbedding 有改动这些版本的风险。bge-m3 的 dense 向量是 XLM-R 最后一层 CLS 位置的隐状态再做 L2 归一化，`AutoTokenizer` + `AutoModel` 就够。只用 dense，不取 sparse，也不取 colbert。
 
 **为什么不用 LangChain**：本项目 style 路的检索查询是一个 20 维 numpy 向量，不是字符串。LangChain 的 `BaseRetriever.invoke(query: str)` 接口假设查询是文本，适配它只能继承基类重写，净收益为负。`EnsembleRetriever` 虽内置 RRF，但它融合的是吃字符串的 retriever，同样用不上。RRF 自己写十行就够。
 

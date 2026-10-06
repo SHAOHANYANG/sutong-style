@@ -171,7 +171,7 @@ CPU测试用Fake；资源不足的训练另交人工脚本，不在T0.0实现。
 
 依赖：T1.1
 
-产出：`retrieval/dense.py`、`infra/bge_embedder.py`（`Embedder` Protocol 的真实实现）、`tests/fakes.py` 里的 `FakeEmbedder`。向量存 pgvector。
+产出：`retrieval/dense.py`、`infra/bge_embedder.py`（`Embedder` Protocol 的真实实现）、`tests/fakes.py` 里的 `FakeEmbedder`。本任务不接 pgvector，向量缓存到 `retrieval/data/embeddings.npy`，用 numpy 余弦检索。pgvector 迁入见 T3.3。
 
 降级路径：`bge-m3` 在 CPU 上编码 907 条约几分钟，可接受。先用 CPU 跑通并把向量缓存到 `retrieval/data/embeddings.npy`（gitignored）。
 
@@ -307,7 +307,7 @@ CPU测试用Fake；资源不足的训练另交人工脚本，不在T0.0实现。
 
 依赖：T3.2
 
-产出：alembic 迁移脚本，建 chunk 元数据表与向量表。
+产出：alembic 迁移脚本，建 chunk 元数据表与向量表。把 dense 向量从 `retrieval/data/embeddings.npy` 迁入 pgvector。
 
 验收：`alembic upgrade head` 与 `downgrade base` 都能跑通。
 

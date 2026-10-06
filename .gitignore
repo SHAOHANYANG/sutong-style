@@ -30,6 +30,7 @@ unsloth_compiled_cache/
 # ============================================================
 eval/.judge_cache/
 retrieval/data/embeddings.npy
+retrieval/data/embeddings.meta.json
 retrieval/data/bm25_index.pkl
 
 # Python

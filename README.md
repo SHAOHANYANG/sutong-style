@@ -105,6 +105,18 @@ uv run python -m eval.run_eval --config eval/configs/eval59.yaml \
 
 `scripts/train.py` 与 `scripts/generate.py` 共用同一个 `build_messages()`。**训练与推理的 prompt 必须同源**，差一个 token 则 adapter 失效。
 
+### 建 dense 索引
+
+用已经配好的 `~/venvs/sutong`，不要重装 torch / transformers。第一次运行会把 `BAAI/bge-m3` 下到 Hugging Face 缓存，权重不进仓库。输出是 `retrieval/data/embeddings.npy` 和 `embeddings.meta.json`，两个都在 `.gitignore` 里。
+
+```bash
+~/venvs/sutong/bin/python -m scripts.build_dense_index
+# 没有 GPU 时的降级路径：
+~/venvs/sutong/bin/python -m scripts.build_dense_index --device cpu
+```
+
+默认编码 `corpus/split.json` 里全部 train 原文，max_length 512，batch 8。有 CUDA 时用 bfloat16。日志里的 `truncated` 大于 0 表示有 chunk 被截断。缓存和当前语料或模型对不上时，加载会直接报错，不会静默重算。
+
 ## Quickstart
 
 <!-- TODO(T3.4) -->
