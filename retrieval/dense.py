@@ -57,6 +57,10 @@ class DenseIndex:
             raise ValueError("索引含零向量")
         self._matrix = matrix / norms[:, None]
 
+    @property
+    def ids(self) -> tuple[str, ...]:
+        return tuple(self._ids)
+
     @classmethod
     def from_documents(cls, documents: Sequence[Document], embedder: Embedder) -> DenseIndex:
         """Encode originals on the spot. Empty input does not call the embedder."""

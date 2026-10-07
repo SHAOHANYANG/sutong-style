@@ -117,6 +117,15 @@ uv run python -m eval.run_eval --config eval/configs/eval59.yaml \
 
 默认编码 `corpus/pairs.jsonl` 里 `split` 为 train 的原文（当前 743 条，过了内容闸门的配对），max_length 512，batch 8，权重 float32。先加 `--dry-run` 可以只核对条数和路径，不下载模型、不写文件。日志里的 `truncated` 大于 0 表示有 chunk 被截断。缓存和当前语料或模型对不上时，加载会直接报错，不会静默重算。
 
+eval 白话的查询向量单独缓存，不和上面的原文索引写进同一个目录。模型、revision、max_length 必须和原文索引一致，否则加载直接拒绝。
+
+```bash
+~/venvs/sutong/bin/python -m scripts.build_query_cache --dry-run
+~/venvs/sutong/bin/python -m scripts.build_query_cache
+```
+
+输出在 `retrieval/data/query_cache/`，已进 `.gitignore`。同样不要重装 torch / transformers。
+
 ## Quickstart
 
 <!-- TODO(T3.4) -->

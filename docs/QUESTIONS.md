@@ -1,5 +1,22 @@
 # QUESTIONS
 
+## Q24 — 查询向量脚本的形态、token 计数与包的延迟导入（2026-10-07，按假设实现）
+
+**问题**
+预注册没有写查询向量脚本是新文件还是 `build_dense_index.py` 的一个模式，也没有写它要不要核对 `split.json`。
+真实 tokenizer 怎么把消息列表变成 token 数，以及按字符数的 Fake 数哪些字符，也没有写。
+查询脚本禁止带上 `eval` / `stylometry`，但 `import retrieval` 原来会立刻加载风格索引，风格索引又导入 stylometry。
+
+**假设**
+查询向量用新脚本 `scripts/build_query_cache.py`，默认写到 `retrieval/data/query_cache/`。不做成建索引脚本的模式，避免一次手滑把查询向量写进原文索引目录。
+脚本复用建索引那套 split 交叉核对，然后只取 `split == eval` 的白话，按 `pairs.jsonl` 里的出现顺序编码。缓存的文本是白话，所以 sha256 对得上查询。
+`QwenPromptTokenizer.count` 用 Qwen 的 chat template，`add_generation_prompt=True`，数的是生成时真正送进模型的那段。`FakePromptTokenizer` 只加每条消息 `content` 的字符数，不加角色名。
+`retrieval/__init__.py` 改成用到 `StyleIndex` 和 `HybridRetriever` 时才导入。BM25 和 Dense 各加一个只读的 `ids` 属性，检索行为不变，供三路 id 集合核对。id 集合按集合相等，顺序可以不同。
+预算判断是「大于 4096 才失败」，prompt token 数加 768 正好等于 4096 时通过。
+
+**影响范围**
+T1.5 后半的扫描脚本要沿用这些约定。人工在 WSL2 跑的是 `python -m scripts.build_query_cache`，不是建索引脚本的新参数。
+
 ## Q23 — 零权重路是否仍校验 rank，以及 rank 是否要求列表已排序（2026-10-06，按假设实现）
 
 **问题**

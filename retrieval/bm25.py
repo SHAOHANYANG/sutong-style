@@ -88,6 +88,10 @@ class Bm25Index:
         else:
             self._model = None
 
+    @property
+    def ids(self) -> tuple[str, ...]:
+        return tuple(document.id for document in self._documents)
+
     def search(self, query: str, k: int, exclude_ids: Collection[str] = ()) -> list[Hit]:
         """Return up to `k` hits with score > 0. Ties break by id ascending."""
         if k <= 0:

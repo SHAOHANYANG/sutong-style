@@ -4,6 +4,14 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-07 EDT T1.5 前半：三路装配与 few-shot prompt
+
+预注册在看到任何生成结果之前单独提交（`a7b1f1c`），规则在 SPEC §4.6。本轮没有生成，也没有 k 扫描。主配置 balanced、k = 2 是预注册时按论证选定的，还没有数据，不能把它说成更好。
+
+`retrieval/hybrid.py` 把三路接起来。BM25 和 dense 用查询文本，style 用预测后的 z 向量。权重为 0 的路不查询。三个索引的 id 集合不一致就拒绝构造。`retrieval/prompt.py` 按训练时的 system 文本拼多轮范例，排名第 1 的范例紧挨真正的输入；k = 0 与 `build_messages(vernacular, None)` 相同。prompt token 数加 768 超过 4096 就报错，不截断。
+
+dense 查询向量另写 `scripts/build_query_cache.py`，默认目录 `retrieval/data/query_cache/`，已进 `.gitignore`。只编码 `split == eval` 的白话。非 dry-run 待人工在 WSL2 执行，这次只跑了 `--dry-run`。
+
 ## 2026-10-06 EDT T1.4 带权重的 RRF 融合
 
 `retrieval/fusion.py` 把三路 `Hit` 列表融成带出处的排名。默认每路权重为 1、`rrf_k` 为 60，与 SPEC 的等权公式一致。权重可以另给，0 等于这路不参与。`sources` 记下每条文档来自哪几路、在各路排第几。

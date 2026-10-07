@@ -107,6 +107,13 @@ class FakeTwoPassGenerator:
         return json.dumps({"issues": [], "repaired_text": text}, ensure_ascii=False)
 
 
+class FakePromptTokenizer:
+    """Character count of message contents. No tokenizer and no download."""
+
+    def count(self, messages: list[dict[str, str]]) -> int:
+        return sum(len(message["content"]) for message in messages)
+
+
 class FakeEmbedder:
     """Deterministic encoder. Injected vectors win; everything else is a text hash."""
 
