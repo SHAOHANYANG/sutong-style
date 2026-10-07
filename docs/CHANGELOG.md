@@ -4,6 +4,10 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-07 EDT T2.4：TraceEvent 与每轮违规
+
+`TraceEvent` 落地：每节点记 `node / ts / duration_ms / payload`。时钟与单调计时器可注入。payload 只放 id、hash、长度和违规短片段，不含正文。`RoundRecord.violations` 补上该轮完整违规列表。本阶段无新的端到端评估数字。
+
 ## 2026-10-07 EDT T2.3：逐条修订 prompt
 
 `numeral_key_surfaces` 与 `extract_quantities` 改为共用 `iter_quantity_hits`，抽取结果不变。`agent/prompts.py` 实现 followup / restate 两种反馈；默认 followup。数字反馈同时要求数值不变与中文数字书写。消息构造函数成为图的默认构造器。

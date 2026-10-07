@@ -1,5 +1,20 @@
 # QUESTIONS
 
+## Q29 — TraceEvent 时钟注入、payload 键名与 rounds 是否存完整违规（2026-10-07，按假设实现）
+
+**问题**
+SPEC §4.4 要求 `TraceEvent{node, ts, duration_ms, payload}`，但没有写时钟如何注入、各节点 payload 的键名、以及 `AgentResult.rounds` 是否只保留违规条数（Q27 假设只留条数）。
+换范例那一次 retrieve 的标记叫什么、generate 异常时 payload 怎么表示，也没有写。
+
+**假设**
+`run_agent` / `build_graph` 收 `now_fn: () -> str`（UTC ISO，默认真实时钟）与 `mono_fn: () -> float`（单调计时，默认 `time.monotonic`）。
+payload 键：retrieve 用 `exemplar_ids` / `is_re_retrieve`；generate 用 `round` / `feedback_format` / `prompt_sha256` / `output_sha256` / `output_chars` / `raised` / `error_type`；verify 用 `violation_count` / `violations[{kind,expected,actual}]`；score 用 `score`；route 用 `decision`。
+`RoundRecord.violations` 存该轮完整 `Violation` 列表，覆盖 Q27「结果只留条数」的假设；条数仍保留在 `violation_count`。
+payload 与序列化后的 trace 均不含输入/输出/范例/prompt 正文。
+
+**影响范围**
+`agent/{state,nodes,graph}.py`、`tests/test_agent_graph.py`。§1.2、§4.6、§4.7 不改。
+
 ## Q28 — 违规 kind 命名、打分器装配与验证报告字段（2026-10-07，按假设实现）
 
 **问题**

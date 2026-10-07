@@ -7,7 +7,7 @@ from agent.state import (
     RECURSION_LIMIT,
     AgentResult,
     RoundRecord,
-    TraceEntry,
+    TraceEvent,
 )
 
 __all__ = [
@@ -16,7 +16,7 @@ __all__ = [
     "AgentConfig",
     "AgentResult",
     "RoundRecord",
-    "TraceEntry",
+    "TraceEvent",
     "build_graph",
     "run_agent",
 ]

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict
+from typing import Any, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
@@ -35,11 +35,13 @@ FallbackKind = Literal[
 RouteDecision = Literal["accept", "revise", "re_retrieve"]
 
 
-class TraceEntry(BaseModel):
-    """Minimal per-node record. Timestamps and payloads arrive in T2.4."""
+class TraceEvent(BaseModel):
+    """One node visit. Payload never holds full prose bodies."""
 
     node: str
-    round: int
+    ts: str
+    duration_ms: float
+    payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class RoundRecord(BaseModel):
@@ -48,6 +50,7 @@ class RoundRecord(BaseModel):
     round: int
     output: str
     violation_count: int
+    violations: list[Violation] = Field(default_factory=list)
     score: float
 
 
@@ -62,7 +65,7 @@ class AgentResult(BaseModel):
     error: str | None = None
     rounds: list[RoundRecord] = Field(default_factory=list)
     re_retrieved: bool = False
-    trace: list[TraceEntry] = Field(default_factory=list)
+    trace: list[TraceEvent] = Field(default_factory=list)
 
 
 class AgentState(TypedDict, total=False):
@@ -72,15 +75,21 @@ class AgentState(TypedDict, total=False):
     exemplars: list[Exemplar]
     candidates: list[str]
     violation_counts: list[int]
+    violations_history: list[list[Violation]]
     scores: list[float]
     last_violations: list[Violation]
     last_score: float
+    last_route: RouteDecision
+    last_prompt_sha256: str
+    last_output_sha256: str
+    last_output_chars: int
+    last_generate_error_type: str | None
     iter: int
     re_retrieved: bool
     max_generations: int
     score_threshold: float | None
     feedback_format: str
-    trace: list[TraceEntry]
+    trace: list[TraceEvent]
     halt: bool
     halt_kind: FallbackKind
     error: str

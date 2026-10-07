@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from langgraph.errors import GraphRecursionError
@@ -33,7 +35,19 @@ from agent.state import (
     FallbackKind,
     RoundRecord,
     TerminationReason,
+    TraceEvent,
 )
+
+NowFn = Callable[[], str]
+MonoFn = Callable[[], float]
+
+
+def _default_now() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _default_mono() -> float:
+    return time.monotonic()
 
 
 @dataclass
@@ -82,21 +96,64 @@ def _classify_termination(state: AgentState) -> tuple[TerminationReason, Fallbac
     return "accepted", None
 
 
+def _payload_for(node_name: str, before: AgentState, after: AgentState) -> dict[str, Any]:
+    """Build a prose-free payload for one node visit."""
+    if node_name == "retrieve":
+        exemplars = after.get("exemplars") or []
+        return {
+            "exemplar_ids": [item.id for item in exemplars],
+            "is_re_retrieve": int(before.get("iter") or 0) > 0,
+        }
+    if node_name == "generate":
+        error_type = after.get("last_generate_error_type")
+        return {
+            "round": int(after.get("iter") or 0),
+            "feedback_format": after.get("feedback_format") or before.get("feedback_format"),
+            "prompt_sha256": after.get("last_prompt_sha256") or "",
+            "output_sha256": after.get("last_output_sha256") or "",
+            "output_chars": int(after.get("last_output_chars") or 0),
+            "raised": error_type is not None,
+            "error_type": error_type,
+        }
+    if node_name == "verify":
+        violations = after.get("last_violations") or []
+        return {
+            "violation_count": len(violations),
+            "violations": [
+                {
+                    "kind": item.kind,
+                    "expected": item.expected,
+                    "actual": item.actual,
+                }
+                for item in violations
+            ],
+        }
+    if node_name == "score":
+        return {"score": after.get("last_score")}
+    if node_name == "route":
+        return {"decision": after.get("last_route")}
+    return {}
+
+
 def build_result(state: AgentState, vernacular: str) -> AgentResult:
     """Never return empty success. Fallbacks label themselves."""
     candidates = list(state.get("candidates") or [])
     violation_counts = list(state.get("violation_counts") or [])
+    violations_history = list(state.get("violations_history") or [])
     scores = list(state.get("scores") or [])
     while len(violation_counts) < len(candidates):
         violation_counts.append(0)
     while len(scores) < len(candidates):
         scores.append(float("-inf"))
+    while len(violations_history) < len(candidates):
+        violations_history.append([])
 
     rounds = [
         RoundRecord(
             round=index + 1,
             output=text,
             violation_count=violation_counts[index],
+            violations=list(violations_history[index]),
             score=scores[index],
         )
         for index, text in enumerate(candidates)
@@ -181,10 +238,14 @@ def build_graph(
     scorer: Scorer,
     message_builder: MessageBuilder | None = None,
     route_fn: RouteFn | None = None,
+    now_fn: NowFn | None = None,
+    mono_fn: MonoFn | None = None,
 ) -> tuple[Any, _RunBox]:
     """Compile retrieve → generate → verify → score → route."""
     builder = message_builder
     choose = route_fn or default_route
+    clock_now = now_fn or _default_now
+    clock_mono = mono_fn or _default_mono
     box = _RunBox()
     if builder is None:
         raise ValueError("message_builder 必须由 run_agent 注入")
@@ -193,10 +254,20 @@ def build_graph(
         node_name: str, fn: Callable[[AgentState], AgentState]
     ) -> Callable[[AgentState], dict[str, Any]]:
         def wrapped(state: AgentState) -> dict[str, Any]:
+            started = clock_mono()
             update = fn(state)
+            duration_ms = (clock_mono() - started) * 1000.0
             merged: AgentState = {**state, **update}
-            box.state = merged
-            return dict(update)
+            event = TraceEvent(
+                node=node_name,
+                ts=clock_now(),
+                duration_ms=duration_ms,
+                payload=_payload_for(node_name, state, merged),
+            )
+            new_trace = [*list(state.get("trace") or []), event]
+            with_trace: dict[str, Any] = {**update, "trace": new_trace}
+            box.state = {**merged, "trace": new_trace}
+            return with_trace
 
         wrapped.__name__ = node_name
         return wrapped
@@ -208,7 +279,7 @@ def build_graph(
     graph.add_node("generate", _watch("generate", make_generate(generator, builder)))
     graph.add_node("verify", _watch("verify", make_verify(verifier)))
     graph.add_node("score", _watch("score", make_score(scorer)))
-    graph.add_node("route", _watch("route", make_route_node()))
+    graph.add_node("route", _watch("route", make_route_node(choose)))
 
     graph.add_edge(START, "retrieve")
     graph.add_edge("retrieve", "generate")
@@ -238,6 +309,8 @@ def run_agent(
     score_threshold: float | None = None,
     message_builder: MessageBuilder | None = None,
     route_fn: RouteFn | None = None,
+    now_fn: NowFn | None = None,
+    mono_fn: MonoFn | None = None,
 ) -> AgentResult:
     """Run the loop. Recursion-limit and generator failures still return a labeled result."""
     settings = (
@@ -251,12 +324,15 @@ def run_agent(
         scorer=scorer,
         message_builder=builder,
         route_fn=route_fn,
+        now_fn=now_fn,
+        mono_fn=mono_fn,
     )
     initial: AgentState = {
         "input": vernacular,
         "exemplars": [],
         "candidates": [],
         "violation_counts": [],
+        "violations_history": [],
         "scores": [],
         "last_violations": [],
         "iter": 0,

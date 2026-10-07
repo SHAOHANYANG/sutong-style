@@ -272,7 +272,7 @@ Phase 0 的靶子已经量化了，Phase 1 要看的是：
 | **T2.1** | `agent/state.py`、`graph.py`、`nodes.py` 骨架，节点先用 Fake | **循环上限有单测**：构造永远违规的 Fake，断言恰好 3 轮后退出且返回非空。`recursion_limit` 与显式 iter 计数两道保险都要有测试 |
 | **T2.2** | 节点接入 `eval/fidelity.py` 与 `stylometry/distance.py`，路由阈值放 `agent/config.py` | **断言 agent 模块没有 import `eval/judge.py`**（写成 import 检查测试）。LLM judge 不得进环 |
 | **T2.3** | `agent/prompts.py`，逐条具体反馈 | 断言生成的 prompt 含每条的具体词对（如「太医」「宫监」）。**禁止「请更忠实于原意」这类笼统措辞**，写一条断言排除它 |
-| **T2.4** | `TraceEvent` 落地，每节点记 `node / ts / duration_ms / payload` | trace 可 JSON 序列化；事件数与实际节点执行次数一致 |
+| **T2.4** | `TraceEvent` 落地，每节点记 `node / ts / duration_ms / payload` | ✅ trace 可 JSON 序列化；事件数与节点执行次数一致；时钟可注入 |
 | **T2.5** `[GPU]` | README 追加 `agent` 行 | CHANGELOG 记 `hallucination_rate` 与 `numeral_recall` 变化幅度，以及**修订轮数分布**（多少条一轮过、多少条用到 3 轮） |
 
 **硬禁令**：用 `langgraph` 不用 `langchain`；LLM judge 不得进 agent 循环（太慢，一轮几秒三轮超时），环内只允许确定性指标。这个分层是整套设计的核心取舍。

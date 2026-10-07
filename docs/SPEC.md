@@ -784,7 +784,17 @@ route ─┬─ "accept"      → END
 
 **环内只允许确定性指标。** `verify` 用 3.2 的规则指标，`score` 用注入的确定性打分器。LLM judge 一轮几秒、三轮直接超时，所以它只能离线用。这个「离线评估与在线 reward 用不同精度指标」的分层是本项目核心设计取舍，不要改。
 
-`trace` 每个节点追加一条记录。T2.1 骨架只记 `{node, round}`；完整的 `TraceEvent{node, ts, duration_ms, payload}` 在 T2.4 落地，直接喂给前端可视化面板（Phase 4）。
+`trace` 每个节点执行一次追加一条 `TraceEvent{node, ts, duration_ms, payload}`。`ts` 为 UTC ISO 字符串，`duration_ms` 为该节点耗时。时钟与计时器可注入（默认真实时钟），保证确定性测试。payload 字段：
+
+| 节点 | payload |
+|---|---|
+| retrieve | `exemplar_ids`（与 prompt 中范例顺序一致）、`is_re_retrieve` |
+| generate | `round`、`feedback_format`、`prompt_sha256`、`output_sha256`、`output_chars`、`raised`、`error_type` |
+| verify | `violation_count`、`violations[{kind, expected, actual}]` |
+| score | `score` |
+| route | `decision`（`accept` / `revise` / `re_retrieve`） |
+
+payload **不放整段正文**（输入、输出、范例正文、prompt 全文都不放），只放 hash、长度、id 和违规里的短片段。需要正文时从 `AgentResult.rounds` 取。`rounds` 每一轮含该轮完整 `violations` 列表（不只是条数），供 T2.5 分析哪类违规修得掉。trace 直接喂给前端可视化面板（Phase 4）。
 
 ### 4.5 revise 的 prompt 构造
 

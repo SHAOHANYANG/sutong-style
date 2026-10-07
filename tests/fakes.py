@@ -150,8 +150,10 @@ class FakeAgentRetriever:
     def __init__(self, batches: Sequence[Sequence[Exemplar]] | None = None) -> None:
         self.batches = [list(batch) for batch in (batches or [[]])]
         self.calls: list[str] = []
+        self.node_calls = 0
 
     def retrieve(self, vernacular: str) -> list[Exemplar]:
+        self.node_calls += 1
         self.calls.append(vernacular)
         index = min(len(self.calls) - 1, len(self.batches) - 1)
         return list(self.batches[index])
@@ -169,8 +171,10 @@ class FakeAgentGenerator:
         self.outputs = list(outputs) if outputs is not None else ["生成结果"]
         self.errors_on = set(errors_on or [])
         self.calls: list[list[dict[str, str]]] = []
+        self.node_calls = 0
 
     def generate(self, messages: list[dict[str, str]]) -> str:
+        self.node_calls += 1
         self.calls.append(list(messages))
         call_index = len(self.calls) - 1
         if call_index in self.errors_on:
@@ -196,8 +200,10 @@ class FakeAgentVerifier:
             self._always = None
             self.batches = [list(batch) for batch in (batches or [[]])]
         self.calls: list[tuple[str, str]] = []
+        self.node_calls = 0
 
     def verify(self, vernacular: str, output: str) -> list[Violation]:
+        self.node_calls += 1
         self.calls.append((vernacular, output))
         if self._always is not None:
             return list(self._always)
@@ -219,8 +225,10 @@ class FakeAgentScorer:
         self.always = always
         self.fn = fn
         self.calls: list[tuple[str, str]] = []
+        self.node_calls = 0
 
     def score(self, vernacular: str, output: str) -> float:
+        self.node_calls += 1
         self.calls.append((vernacular, output))
         if self.fn is not None:
             return float(self.fn(vernacular, output))

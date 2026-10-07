@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable, Sequence
 from typing import Protocol
 
@@ -13,7 +15,6 @@ from agent.state import (
     AgentState,
     FallbackKind,
     RouteDecision,
-    TraceEntry,
 )
 from eval.fidelity import Violation
 from retrieval.prompt import Exemplar
@@ -47,6 +48,15 @@ class Scorer(Protocol):
 
 MessageBuilder = Callable[[AgentState], list[dict[str, str]]]
 RouteFn = Callable[[AgentState], RouteDecision]
+
+
+def sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def sha256_messages(messages: list[dict[str, str]]) -> str:
+    packed = json.dumps(messages, ensure_ascii=False, separators=(",", ":"))
+    return sha256_text(packed)
 
 
 def default_message_builder(state: AgentState) -> list[dict[str, str]]:
@@ -85,18 +95,10 @@ def default_route(state: AgentState) -> RouteDecision:
     return "accept"
 
 
-def _append_trace(state: AgentState, node: str) -> list[TraceEntry]:
-    entry = TraceEntry(node=node, round=int(state.get("iter") or 0))
-    return [*list(state.get("trace") or []), entry]
-
-
 def make_retrieve(retriever: Retriever) -> Callable[[AgentState], AgentState]:
     def retrieve(state: AgentState) -> AgentState:
         exemplars = list(retriever.retrieve(state["input"]))
-        update: AgentState = {
-            "exemplars": exemplars,
-            "trace": _append_trace(state, "retrieve"),
-        }
+        update: AgentState = {"exemplars": exemplars}
         if int(state.get("iter") or 0) > 0:
             update["re_retrieved"] = True
         return update
@@ -109,10 +111,10 @@ def make_generate(
     message_builder: MessageBuilder,
 ) -> Callable[[AgentState], AgentState]:
     def generate(state: AgentState) -> AgentState:
-        trace = _append_trace(state, "generate")
         iterations = int(state.get("iter") or 0)
         try:
             messages = message_builder(state)
+            digest = sha256_messages(messages)
             text = generator.generate(messages)
         except Exception as exc:
             kind: FallbackKind = "first_round_error" if iterations == 0 else "later_round_error"
@@ -127,12 +129,18 @@ def make_generate(
                 "halt": True,
                 "halt_kind": kind,
                 "error": f"{error_type}: {exc}",
-                "trace": trace,
+                "last_prompt_sha256": "",
+                "last_output_sha256": "",
+                "last_output_chars": 0,
+                "last_generate_error_type": error_type,
             }
         return {
             "candidates": [*list(state.get("candidates") or []), text],
             "iter": iterations + 1,
-            "trace": trace,
+            "last_prompt_sha256": digest,
+            "last_output_sha256": sha256_text(text),
+            "last_output_chars": len(text),
+            "last_generate_error_type": None,
         }
 
     return generate
@@ -140,17 +148,17 @@ def make_generate(
 
 def make_verify(verifier: Verifier) -> Callable[[AgentState], AgentState]:
     def verify(state: AgentState) -> AgentState:
-        trace = _append_trace(state, "verify")
         if state.get("halt"):
-            return {"trace": trace}
+            return {}
         candidates = state.get("candidates") or []
         if not candidates:
-            return {"trace": trace}
+            return {}
         if not candidates[-1].strip():
+            empty: list[Violation] = []
             return {
-                "last_violations": [],
+                "last_violations": empty,
                 "violation_counts": [*list(state.get("violation_counts") or []), 0],
-                "trace": trace,
+                "violations_history": [*list(state.get("violations_history") or []), empty],
             }
         violations = verifier.verify(state["input"], candidates[-1])
         return {
@@ -159,7 +167,10 @@ def make_verify(verifier: Verifier) -> Callable[[AgentState], AgentState]:
                 *list(state.get("violation_counts") or []),
                 len(violations),
             ],
-            "trace": trace,
+            "violations_history": [
+                *list(state.get("violations_history") or []),
+                list(violations),
+            ],
         }
 
     return verify
@@ -167,32 +178,31 @@ def make_verify(verifier: Verifier) -> Callable[[AgentState], AgentState]:
 
 def make_score(scorer: Scorer) -> Callable[[AgentState], AgentState]:
     def score_node(state: AgentState) -> AgentState:
-        trace = _append_trace(state, "score")
         if state.get("halt"):
-            return {"trace": trace}
+            return {}
         candidates = state.get("candidates") or []
         if not candidates:
-            return {"trace": trace}
+            return {}
         if not candidates[-1].strip():
             return {
                 "last_score": 0.0,
                 "scores": [*list(state.get("scores") or []), 0.0],
-                "trace": trace,
             }
         value = float(scorer.score(state["input"], candidates[-1]))
         return {
             "last_score": value,
             "scores": [*list(state.get("scores") or []), value],
-            "trace": trace,
         }
 
     return score_node
 
 
-def make_route_node() -> Callable[[AgentState], AgentState]:
-    """Record the visit; the conditional edge chooses the branch separately."""
+def make_route_node(route_fn: RouteFn | None = None) -> Callable[[AgentState], AgentState]:
+    """Record the decision; the conditional edge uses the same function."""
+
+    choose = route_fn or default_route
 
     def route_node(state: AgentState) -> AgentState:
-        return {"trace": _append_trace(state, "route")}
+        return {"last_route": choose(state)}
 
     return route_node
