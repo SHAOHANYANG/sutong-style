@@ -21,6 +21,15 @@ class Hit(BaseModel):
     score: float
 
 
+class FusedHit(BaseModel):
+    """One document after fusion. `sources` maps a route name to its rank in that route."""
+
+    id: str
+    rank: int
+    score: float
+    sources: dict[str, int]
+
+
 class Embedder(Protocol):
     """Injected text encoder. `encode` returns shape `(n, dim)`."""
 

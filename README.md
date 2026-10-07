@@ -27,7 +27,7 @@
 - `profile_gap` 是集合级：先对全部样本求剖面差 d 的逐维均值，再对 20 维取绝对值求平均。方向相反的误差会抵消。白话 0.450 → LoRA 0.204，这句话里的「缩了一半还多」只在这个口径下成立；base 是 0.494。逐条口径 `profile_gap_per_case` 是每一条与自己原文的平均 \|z\| 差，再对样本求均值：白话 0.623 → LoRA 0.514，base 0.748。`human_eval` 没有 ground truth，两列都算不了。
 - `style_win_rate` 这一轮**不可单独引用**：`tie_rate = 0.49`，A/B 位置对调后评委有一半改口。详见下方「已知局限」。
 
-分维数字取报告里的 `profile_mean_delta`。`sent_len_p90` 白话 -0.61、base -0.62、LoRA -0.61；`sent_len_std` 白话 -0.58、base -0.63、LoRA -0.50。原先写的 -0.64 → -0.64、-0.70 → -0.62 对不上这份报告。
+**模型没有学会苏童的句长变化。** `eval/reports/lora-eval59.json` 的 `profile_mean_delta`：`sent_len_p90` 白话 -0.61、LoRA -0.61，微调后没有移动；`sent_len_std` 白话 -0.58、LoRA -0.50，移动很小。消融报告的折外 R²：`sent_len_std` 0.197、`sent_len_p90` 0.312，在 20 维里属于偏低的一组（`para_density` 0.883、`dialogue_verb_density` 0.800）。白话输入的这 20 维特征对目标原文的句长变化只有很弱的线性预测力。原先手填的 -0.64 → -0.64、-0.70 → -0.62 对不上这份报告，上面的分维数字取自报告本身。
 
 指标定义见 [SPEC 3.1](docs/SPEC.md#31-指标清单)。填写 `style_win_rate` 时必须同时标注 `tie_rate` 和 `copy_ratio`。`tie_rate` 只在 `identical_rate` 低时才表示位置偏差；`copy_ratio` 高而 `tie_rate` 高是模型在抄，不是评委失效。定义见 [SPEC 3.3](docs/SPEC.md#33-风格胜率llm-judge)。
 
