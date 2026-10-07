@@ -79,6 +79,7 @@ class AgentState(TypedDict, total=False):
     re_retrieved: bool
     max_generations: int
     score_threshold: float | None
+    feedback_format: str
     trace: list[TraceEntry]
     halt: bool
     halt_kind: FallbackKind

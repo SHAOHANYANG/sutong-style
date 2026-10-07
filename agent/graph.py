@@ -17,7 +17,6 @@ from agent.nodes import (
     RouteFn,
     Scorer,
     Verifier,
-    default_message_builder,
     default_route,
     make_generate,
     make_retrieve,
@@ -25,6 +24,7 @@ from agent.nodes import (
     make_score,
     make_verify,
 )
+from agent.prompts import make_revision_message_builder
 from agent.state import (
     MAX_GENERATIONS,
     RECURSION_LIMIT,
@@ -183,9 +183,11 @@ def build_graph(
     route_fn: RouteFn | None = None,
 ) -> tuple[Any, _RunBox]:
     """Compile retrieve → generate → verify → score → route."""
-    builder = message_builder or default_message_builder
+    builder = message_builder
     choose = route_fn or default_route
     box = _RunBox()
+    if builder is None:
+        raise ValueError("message_builder 必须由 run_agent 注入")
 
     def _watch(
         node_name: str, fn: Callable[[AgentState], AgentState]
@@ -241,12 +243,13 @@ def run_agent(
     settings = (
         config if config is not None else AgentConfig(re_retrieve_score_threshold=score_threshold)
     )
+    builder = message_builder or make_revision_message_builder(settings.feedback_format)
     compiled, box = build_graph(
         retriever=retriever,
         generator=generator,
         verifier=verifier,
         scorer=scorer,
-        message_builder=message_builder,
+        message_builder=builder,
         route_fn=route_fn,
     )
     initial: AgentState = {
@@ -260,6 +263,7 @@ def run_agent(
         "re_retrieved": False,
         "max_generations": settings.max_generations,
         "score_threshold": settings.re_retrieve_score_threshold,
+        "feedback_format": settings.feedback_format,
         "trace": [],
         "halt": False,
     }

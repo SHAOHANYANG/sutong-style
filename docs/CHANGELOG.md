@@ -4,6 +4,10 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-07 EDT T2.3：逐条修订 prompt
+
+`numeral_key_surfaces` 与 `extract_quantities` 改为共用 `iter_quantity_hits`，抽取结果不变。`agent/prompts.py` 实现 followup / restate 两种反馈；默认 followup。数字反馈同时要求数值不变与中文数字书写。消息构造函数成为图的默认构造器。
+
 ## 2026-10-07 EDT T2.2：保真校验接入，换范例默认关闭
 
 `Violation` 增加 `entity_missing` / `numeral_missing` / `entity_hallucination`，与三项保真指标共用同一份抽取；表面片段留给 T2.3。打分器用 StylePredictor 目标的负 MAE，只破平局。审计表在 `eval/reports/agent-scorer-validation.json`：候选 A 无信息量；候选 B 会偏向照抄白话，故 `re_retrieve_score_threshold` 默认 null。三项指标相对 base/lora 基线报告无变化。

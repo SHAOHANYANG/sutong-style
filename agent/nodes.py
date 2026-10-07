@@ -7,6 +7,7 @@ from typing import Protocol
 
 import structlog
 
+from agent.prompts import make_revision_message_builder
 from agent.state import (
     MAX_GENERATIONS,
     AgentState,
@@ -15,7 +16,7 @@ from agent.state import (
     TraceEntry,
 )
 from eval.fidelity import Violation
-from retrieval.prompt import Exemplar, build_prompt
+from retrieval.prompt import Exemplar
 
 LOGGER = structlog.get_logger()
 
@@ -49,8 +50,13 @@ RouteFn = Callable[[AgentState], RouteDecision]
 
 
 def default_message_builder(state: AgentState) -> list[dict[str, str]]:
-    """Training-shaped few-shot prompt with no revision feedback (T2.3 adds that)."""
-    return build_prompt(state["input"], state.get("exemplars") or [])
+    """Revise when the previous round still has violations; otherwise plain few-shot."""
+    raw = state.get("feedback_format") or "followup"
+    if raw == "restate":
+        return make_revision_message_builder("restate")(state)
+    if raw == "followup":
+        return make_revision_message_builder("followup")(state)
+    raise ValueError(f"未知反馈格式: {raw}")
 
 
 def default_route(state: AgentState) -> RouteDecision:

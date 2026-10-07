@@ -217,57 +217,31 @@ def _shang_is_approximate(number: str) -> bool:
     return bool(core) and core[0] in SHANG_MAGNITUDE
 
 
-def numeral_key_surfaces(text: str) -> dict[str, str]:
-    """Map each numeral_keys entry to the first surface span in `text`.
+@dataclass(frozen=True)
+class QuantityHit:
+    """One quantity mention. `bucket` feeds QuantityProfile; `key` feeds numeral_keys."""
 
-    Spans come from the original string (full-width digits kept). Keys match
-    extract_quantities / numeral_keys exactly; extraction rules are unchanged.
-    """
-    surfaces: dict[str, str] = {}
+    bucket: Literal["cardinal", "ordinal", "unparsed"]
+    profile_value: str
+    key: str
+    surface: str
+
+
+def iter_quantity_hits(text: str) -> list[QuantityHit]:
+    """Single extraction pass. Both profile and surface maps derive from this list."""
+    hits: list[QuantityHit] = []
     masked = text.translate(WIDTH_TRANSLATION)
     for title, rank in TITLE_ORDINALS:
         if title in masked:
-            key = f"第{rank}"
-            surfaces.setdefault(key, title)
+            hits.append(
+                QuantityHit(
+                    bucket="ordinal",
+                    profile_value=rank,
+                    key=f"第{rank}",
+                    surface=title,
+                )
+            )
             masked = masked.replace(title, " " * len(title))
-    for match in QUANTITY.finditer(masked):
-        prefix = match.group("prefix")
-        marker = match.group("marker")
-        number = match.group("number")
-        unit = match.group("unit") or ""
-        if not unit and len(number) > 1 and number.endswith("两"):
-            number, unit = number[:-1], "两"
-        if prefix == "上" and marker is None and not _shang_is_approximate(number):
-            continue
-        if not unit and marker is None and prefix is None:
-            continue
-        if prefix is None and marker is None and number == "一" and unit in GRAMMATICAL_UNITS:
-            continue
-        surface = text[match.start() : match.end()]
-        try:
-            normalized = _normalize_number(number)
-        except ValueError:
-            surfaces.setdefault(match.group(0), surface)
-            continue
-        if marker == "第":
-            surfaces.setdefault(f"第{normalized}", surface)
-            continue
-        label = APPROXIMATE_LABEL.get(prefix or "", "")
-        key = f"{label}:{normalized}" if label else normalized
-        surfaces.setdefault(key, surface)
-    return surfaces
-
-
-def extract_quantities(text: str) -> QuantityProfile:
-    """Extract values, not spellings. Titles and 第N stay out of the cardinal set."""
-    masked = text.translate(WIDTH_TRANSLATION)
-    ordinals: set[str] = set()
-    for title, rank in TITLE_ORDINALS:
-        if title in masked:
-            ordinals.add(rank)
-            masked = masked.replace(title, " " * len(title))
-    cardinals: set[str] = set()
-    unparsed: set[str] = set()
     for match in QUANTITY.finditer(masked):
         prefix = match.group("prefix")
         marker = match.group("marker")
@@ -283,16 +257,63 @@ def extract_quantities(text: str) -> QuantityProfile:
             continue
         if prefix is None and marker is None and number == "一" and unit in GRAMMATICAL_UNITS:
             continue
+        surface = text[match.start() : match.end()]
         try:
             normalized = _normalize_number(number)
         except ValueError:
-            unparsed.add(match.group(0))
+            masked_token = match.group(0)
+            hits.append(
+                QuantityHit(
+                    bucket="unparsed",
+                    profile_value=masked_token,
+                    key=masked_token,
+                    surface=surface,
+                )
+            )
             continue
         if marker == "第":
-            ordinals.add(normalized)
+            hits.append(
+                QuantityHit(
+                    bucket="ordinal",
+                    profile_value=normalized,
+                    key=f"第{normalized}",
+                    surface=surface,
+                )
+            )
             continue
         label = APPROXIMATE_LABEL.get(prefix or "", "")
-        cardinals.add(f"{label}:{normalized}" if label else normalized)
+        profile_value = f"{label}:{normalized}" if label else normalized
+        hits.append(
+            QuantityHit(
+                bucket="cardinal",
+                profile_value=profile_value,
+                key=profile_value,
+                surface=surface,
+            )
+        )
+    return hits
+
+
+def numeral_key_surfaces(text: str) -> dict[str, str]:
+    """Map each numeral_keys entry to the first surface span in `text`."""
+    surfaces: dict[str, str] = {}
+    for hit in iter_quantity_hits(text):
+        surfaces.setdefault(hit.key, hit.surface)
+    return surfaces
+
+
+def extract_quantities(text: str) -> QuantityProfile:
+    """Extract values, not spellings. Titles and 第N stay out of the cardinal set."""
+    cardinals: set[str] = set()
+    ordinals: set[str] = set()
+    unparsed: set[str] = set()
+    for hit in iter_quantity_hits(text):
+        if hit.bucket == "cardinal":
+            cardinals.add(hit.profile_value)
+        elif hit.bucket == "ordinal":
+            ordinals.add(hit.profile_value)
+        else:
+            unparsed.add(hit.profile_value)
     return QuantityProfile(
         cardinals=frozenset(cardinals),
         ordinals=frozenset(ordinals),
