@@ -1,0 +1,969 @@
+{
+  "run_id": "retrieval-balanced-k2",
+  "timestamp": "2026-10-07T21:07:42Z",
+  "pipeline": "retrieval",
+  "model": "sutong-v2",
+  "config": {
+    "pipeline": "retrieval",
+    "model": "unknown",
+    "seed": 42,
+    "cases": "corpus/pairs.jsonl",
+    "style_reference": "stylometry/data/style_reference.json",
+    "lexicon": "stylometry/data/lexicon.json",
+    "gazetteer": "corpus/gazetteer.json",
+    "judge_model": "deepseek-v4-pro",
+    "judge_prompt": "eval/prompts/pairwise_judge.txt",
+    "opponent": "vernacular",
+    "split": "eval",
+    "judge_model_used": "deepseek-v4-pro",
+    "skip_judge": true,
+    "prompt_sha256": "370365b82b401b6975072efd6d53d1c8c280a7c4a78f4880dc026c3e9caa14d4"
+  },
+  "n_cases": 59,
+  "aggregate": {
+    "style_distance": 0.9295221674830721,
+    "profile_gap": 0.21428747508553264,
+    "profile_gap_per_case": 0.48526247805497336,
+    "entity_recall": 1.0,
+    "numeral_recall": 0.8915254237288136,
+    "hallucination_rate": 0.00423728813559322,
+    "style_win_rate": null,
+    "copy_ratio": 0.7420065238390928,
+    "ppl": null
+  },
+  "distribution": {
+    "style_distance": {
+      "mean": 0.9295221674830721,
+      "std": 0.28473297140439385,
+      "median": 0.8787919640014454,
+      "q1": 0.7600130255232583,
+      "q3": 1.0487316801130144,
+      "min": 0.4186530667713294,
+      "max": 2.042480804484328
+    },
+    "profile_gap": null,
+    "profile_gap_per_case": {
+      "mean": 0.48526247805497336,
+      "std": 0.2101653795187556,
+      "median": 0.4506131419913152,
+      "q1": 0.34794458511137927,
+      "q3": 0.623442318915989,
+      "min": 0.12688195635817012,
+      "max": 1.0407704494824688
+    },
+    "entity_recall": {
+      "mean": 1.0,
+      "std": 0.0,
+      "median": 1.0,
+      "q1": 1.0,
+      "q3": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "numeral_recall": {
+      "mean": 0.8915254237288136,
+      "std": 0.26993709390220627,
+      "median": 1.0,
+      "q1": 1.0,
+      "q3": 1.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "hallucination_rate": {
+      "mean": 0.00423728813559322,
+      "std": 0.032270225024847075,
+      "median": 0.0,
+      "q1": 0.0,
+      "q3": 0.0,
+      "min": 0.0,
+      "max": 0.25
+    },
+    "style_win_rate": null,
+    "copy_ratio": {
+      "mean": 0.7420065238390928,
+      "std": 0.13088056550586405,
+      "median": 0.729264475743349,
+      "q1": 0.6404761904761904,
+      "q3": 0.8376821048053924,
+      "min": 0.49838187702265374,
+      "max": 0.9949238578680203
+    },
+    "ppl": null
+  },
+  "profile_mean_delta": {
+    "sent_len_mean": -0.49421470390894884,
+    "sent_len_std": -0.4961443453979208,
+    "sent_len_p90": -0.5686343791827314,
+    "comma_ratio": -0.25328887082629836,
+    "period_ratio": 0.4889531942628445,
+    "quote_density": -0.2541053472009925,
+    "dialogue_verb_density": 0.14397873530475808,
+    "simile_density": -0.10848555752247988,
+    "fw_的": -0.14669808169933388,
+    "fw_了": 0.03215546326175662,
+    "fw_着": -0.24504890980969743,
+    "fw_地": 0.04443159018067416,
+    "fw_而": -0.22639386764790695,
+    "fw_其": -0.11445628503096379,
+    "fw_之": -0.2711847086108255,
+    "ttr": -0.06373746948593462,
+    "avg_word_len": -0.025933765044474595,
+    "literary_hit": -0.00974150474221521,
+    "cjk_numeral_ratio": 0.1962206954713514,
+    "para_density": -0.1019420271185439
+  },
+  "vernacular_input": {
+    "profile_gap": 0.44965307613294636,
+    "profile_gap_per_case": 0.6234479961821858,
+    "profile_mean_delta": {
+      "sent_len_mean": -0.48994104186654536,
+      "sent_len_std": -0.5781503132480091,
+      "sent_len_p90": -0.6122877339574924,
+      "comma_ratio": -0.5705171649001243,
+      "period_ratio": -0.06891847761146129,
+      "quote_density": 0.7097663909259864,
+      "dialogue_verb_density": 0.1197402181751151,
+      "simile_density": 0.038134993669646844,
+      "fw_的": -0.6384275600049788,
+      "fw_了": 0.3629936045524941,
+      "fw_着": 0.2900167241223916,
+      "fw_地": -0.17708992737624776,
+      "fw_而": -0.7540056723290834,
+      "fw_其": -0.2960630988856454,
+      "fw_之": -0.45458634081328525,
+      "ttr": -0.22397024171588456,
+      "avg_word_len": -0.5961798150714248,
+      "literary_hit": -1.4351191451931202,
+      "cjk_numeral_ratio": 0.30344085885459016,
+      "para_density": -0.27371219938540126
+    }
+  },
+  "per_case": [
+    {
+      "id": "妻妾成群_0051",
+      "metrics": {
+        "style_distance": 1.0628354637366562,
+        "profile_gap_per_case": 0.2732121524717023,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.9947460595446584,
+        "ppl": null
+      },
+      "output_hash": "sha256:d33ad7af2d9ffbca9369d7bbef0381e1351fc796dbeba733dbcf1a3d25b4ed89"
+    },
+    {
+      "id": "妻妾成群_0059",
+      "metrics": {
+        "style_distance": 0.6548012464124837,
+        "profile_gap_per_case": 0.1751164370302189,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8892455858747994,
+        "ppl": null
+      },
+      "output_hash": "sha256:4456f3a2c1f11afcad35662ee9bd9c3dba7518de6c60b73eae2ef3bb5ab388ff"
+    },
+    {
+      "id": "妻妾成群_0066",
+      "metrics": {
+        "style_distance": 1.1478111234399127,
+        "profile_gap_per_case": 0.23482754305606246,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.9775880469583778,
+        "ppl": null
+      },
+      "output_hash": "sha256:aa15cb802721532d686ae4dc94be2e211d6e76f105fb5c89ed5446cbd63b4370"
+    },
+    {
+      "id": "妻妾成群_0091",
+      "metrics": {
+        "style_distance": 0.8900855042979656,
+        "profile_gap_per_case": 0.280303293185752,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.729264475743349,
+        "ppl": null
+      },
+      "output_hash": "sha256:2a30f23a0114cdb20fa09086980f983a85b0da496d0b3b035eb264f96d47ae62"
+    },
+    {
+      "id": "妻妾成群_0100",
+      "metrics": {
+        "style_distance": 0.7293318297237043,
+        "profile_gap_per_case": 0.4303673627047943,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.9775112443778111,
+        "ppl": null
+      },
+      "output_hash": "sha256:7d252c3862bb64859ad795726cbd67c469d2cf70f01316e944c6778114d2ab60"
+    },
+    {
+      "id": "妻妾成群_0109",
+      "metrics": {
+        "style_distance": 0.9331535156340912,
+        "profile_gap_per_case": 0.14306273976898048,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.9670563230605739,
+        "ppl": null
+      },
+      "output_hash": "sha256:5220f299b41cb4d9de262e6a2c504cc1d51e70155b903a51a24af9de520355be"
+    },
+    {
+      "id": "妻妾成群_0116",
+      "metrics": {
+        "style_distance": 0.7864480168799967,
+        "profile_gap_per_case": 0.4383145858123937,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6020066889632107,
+        "ppl": null
+      },
+      "output_hash": "sha256:5ca3503bf3474167702a2c7709634b54d07d61cf9db65d19e1200697f05fc5cc"
+    },
+    {
+      "id": "妇女生活_0007",
+      "metrics": {
+        "style_distance": 1.4236155241062525,
+        "profile_gap_per_case": 0.44962146693806027,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5915492957746479,
+        "ppl": null
+      },
+      "output_hash": "sha256:6ffb8e4fa62e0a667d280da83b08973994e6abc9aad95550ae123df150b793ea"
+    },
+    {
+      "id": "妇女生活_0026",
+      "metrics": {
+        "style_distance": 1.165726802807165,
+        "profile_gap_per_case": 0.3498391688696497,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7557251908396947,
+        "ppl": null
+      },
+      "output_hash": "sha256:7fa7ca29a86592f0896dd0e7c2260e5a6b3de155ff93518dba32b1450738a941"
+    },
+    {
+      "id": "妇女生活_0050",
+      "metrics": {
+        "style_distance": 1.0537456403147705,
+        "profile_gap_per_case": 0.4655440333598017,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.5,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6726943942133815,
+        "ppl": null
+      },
+      "output_hash": "sha256:55a8c734b2ac3afe85777cb3bc4b7756e9098d5260094f33d5167919113040dc"
+    },
+    {
+      "id": "妇女生活_0074",
+      "metrics": {
+        "style_distance": 1.047348963278731,
+        "profile_gap_per_case": 0.3590846928809802,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6721649484536083,
+        "ppl": null
+      },
+      "output_hash": "sha256:033fdfe73f953dbb7d8a987902b25c152f8b2759b625c5ac0b1fc7a925de04dc"
+    },
+    {
+      "id": "妇女生活_0087",
+      "metrics": {
+        "style_distance": 0.9186125502401612,
+        "profile_gap_per_case": 0.12688195635817012,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.916058394160584,
+        "ppl": null
+      },
+      "output_hash": "sha256:be4c6624ab7013f51f910d9461aaa262b98e2860de828399e7ec403128ef90f6"
+    },
+    {
+      "id": "另一种妇女生活_0012",
+      "metrics": {
+        "style_distance": 0.6678497120159221,
+        "profile_gap_per_case": 0.4195201905151654,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.6666666666666666,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8340943683409436,
+        "ppl": null
+      },
+      "output_hash": "sha256:42756f45be7f0f5c431955df4f03ae2a42674d7410edbfe1c26ff3cce2a41f72"
+    },
+    {
+      "id": "另一种妇女生活_0033",
+      "metrics": {
+        "style_distance": 0.8114892756901012,
+        "profile_gap_per_case": 0.2739335360305578,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.5,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8901098901098901,
+        "ppl": null
+      },
+      "output_hash": "sha256:9960987d798009d8d704cee9a8804cbbaf9303a0c6c7d49da69da8e77779871a"
+    },
+    {
+      "id": "另一种妇女生活_0040",
+      "metrics": {
+        "style_distance": 0.9589937169215065,
+        "profile_gap_per_case": 0.41881813978305293,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.792156862745098,
+        "ppl": null
+      },
+      "output_hash": "sha256:fda61bf578a3d6da6ee3c42de606c27d92c0c5c1bc75f7dd36789b65f57a8157"
+    },
+    {
+      "id": "另一种妇女生活_0049",
+      "metrics": {
+        "style_distance": 0.9034054262139779,
+        "profile_gap_per_case": 0.294535414758849,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.9949238578680203,
+        "ppl": null
+      },
+      "output_hash": "sha256:a2e9d88797a0700df086ac6e035fb17a332eeb77739021e49a8109647f8f0ec1"
+    },
+    {
+      "id": "另一种妇女生活_0054",
+      "metrics": {
+        "style_distance": 0.8525395062833221,
+        "profile_gap_per_case": 0.35324098400144227,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8661971830985915,
+        "ppl": null
+      },
+      "output_hash": "sha256:012bf993c6f4057e57e6f52c2278b124c85658f18109f788dcc402dccc4f0454"
+    },
+    {
+      "id": "另一种妇女生活_0067",
+      "metrics": {
+        "style_distance": 0.6802172187704346,
+        "profile_gap_per_case": 0.8265819625220818,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6955017301038062,
+        "ppl": null
+      },
+      "output_hash": "sha256:aa4f29c35ca61334095388abce3199a516df14ed4b835f17f463e095f81b4935"
+    },
+    {
+      "id": "园艺_0013",
+      "metrics": {
+        "style_distance": 0.806724093084995,
+        "profile_gap_per_case": 0.38577828040738044,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7129455909943715,
+        "ppl": null
+      },
+      "output_hash": "sha256:f6d693fb4a1b63f6a8c8683590011dc26130b34ed170d4921a6bff24009b0963"
+    },
+    {
+      "id": "园艺_0032",
+      "metrics": {
+        "style_distance": 0.8517433106009829,
+        "profile_gap_per_case": 0.8287766525054068,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7985074626865671,
+        "ppl": null
+      },
+      "output_hash": "sha256:3699185c66a50e8a7c5287259d49636eeb8667c1bf612edb10ec71dbb82cf247"
+    },
+    {
+      "id": "园艺_0042",
+      "metrics": {
+        "style_distance": 0.9138844062276301,
+        "profile_gap_per_case": 0.5763921741121429,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8,
+        "ppl": null
+      },
+      "output_hash": "sha256:bb60b9b248bb8b2379d8b99ee6b10eb4337a59c22786f13582d1665f48085678"
+    },
+    {
+      "id": "园艺_0082",
+      "metrics": {
+        "style_distance": 0.7651163738112429,
+        "profile_gap_per_case": 0.5429781789951363,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6775777414075287,
+        "ppl": null
+      },
+      "output_hash": "sha256:7854c4d6b99a83e2264bf7922dd6da407da35c41ce36053869e8d8abbe434504"
+    },
+    {
+      "id": "园艺_0095",
+      "metrics": {
+        "style_distance": 1.0943743478781929,
+        "profile_gap_per_case": 1.015106656744083,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6758620689655173,
+        "ppl": null
+      },
+      "output_hash": "sha256:2521df72171b4eea071ae82f5eda1cd7356448f1611694334580569c2c25f7fb"
+    },
+    {
+      "id": "园艺_0106",
+      "metrics": {
+        "style_distance": 0.6421992118779686,
+        "profile_gap_per_case": 0.6232125618974014,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8944099378881988,
+        "ppl": null
+      },
+      "output_hash": "sha256:36c03130a26bd0dc00671ab8b2221af45dd3ba3873209ba8687e86307707d353"
+    },
+    {
+      "id": "园艺_0107",
+      "metrics": {
+        "style_distance": 0.6282363066478204,
+        "profile_gap_per_case": 0.6897117600001351,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7430997876857749,
+        "ppl": null
+      },
+      "output_hash": "sha256:52d4279e7f1acf0a715a92a33f5ab56f4b501106ef3357509c46524cb9437ab1"
+    },
+    {
+      "id": "罂粟之家_0005",
+      "metrics": {
+        "style_distance": 0.9064720662629422,
+        "profile_gap_per_case": 0.5322790667860638,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7810457516339869,
+        "ppl": null
+      },
+      "output_hash": "sha256:63659a4f3bf368eb828d38a92b042b8559bdda1cc1f281342631593614772d81"
+    },
+    {
+      "id": "罂粟之家_0018",
+      "metrics": {
+        "style_distance": 1.1152818492721077,
+        "profile_gap_per_case": 0.2918827583645065,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8140350877192982,
+        "ppl": null
+      },
+      "output_hash": "sha256:44d6fa356347a6b5abb7de34ad922463f5c7b64d056184576db7d535cf189e50"
+    },
+    {
+      "id": "罂粟之家_0031",
+      "metrics": {
+        "style_distance": 0.6883330366457611,
+        "profile_gap_per_case": 0.6836724827704332,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8745247148288974,
+        "ppl": null
+      },
+      "output_hash": "sha256:50995d9513899cea96936e97e1708dfc038d1aff70bd82167c473a45d3c8183a"
+    },
+    {
+      "id": "罂粟之家_0054",
+      "metrics": {
+        "style_distance": 1.0701766032380873,
+        "profile_gap_per_case": 0.6738079161569523,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8829113924050633,
+        "ppl": null
+      },
+      "output_hash": "sha256:a027765861271980cf9bfe1d0ccb832204f2f6f59fca68a002cf71c058cc9fc2"
+    },
+    {
+      "id": "罂粟之家_0055",
+      "metrics": {
+        "style_distance": 1.9903306489796986,
+        "profile_gap_per_case": 0.3493427784393892,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.9178470254957507,
+        "ppl": null
+      },
+      "output_hash": "sha256:46916840d9e61b7534ee3f58efd77e611e7247c2af4ff0656567e005591127eb"
+    },
+    {
+      "id": "罂粟之家_0094",
+      "metrics": {
+        "style_distance": 0.9934899812574656,
+        "profile_gap_per_case": 0.6476836240709417,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7866419294990723,
+        "ppl": null
+      },
+      "output_hash": "sha256:17c544d54e92e957dae9271334d6b0dda79eda490f6db7d3ad69ce546bfdba01"
+    },
+    {
+      "id": "罂粟之家_0101",
+      "metrics": {
+        "style_distance": 1.020756933986507,
+        "profile_gap_per_case": 0.48367644267687043,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7684391080617495,
+        "ppl": null
+      },
+      "output_hash": "sha256:6a3607ce13ac926eaa064c36e2304263fa525de07947e01b94b05578af0e5696"
+    },
+    {
+      "id": "罂粟之家_0117",
+      "metrics": {
+        "style_distance": 1.0501143969472977,
+        "profile_gap_per_case": 0.45987625949540145,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7615526802218114,
+        "ppl": null
+      },
+      "output_hash": "sha256:0278794fe0ce6952364e494ddf01ab727de2604692b4368ad65ab3db038dafcc"
+    },
+    {
+      "id": "我的帝王生涯_0017",
+      "metrics": {
+        "style_distance": 0.6787691198796307,
+        "profile_gap_per_case": 0.18614422125209215,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5730129390018485,
+        "ppl": null
+      },
+      "output_hash": "sha256:b8f2f4df41c722c5ff62e091cbfffefbec98059f2e63270391dd1babbe7a9012"
+    },
+    {
+      "id": "我的帝王生涯_0046",
+      "metrics": {
+        "style_distance": 0.7452924933532984,
+        "profile_gap_per_case": 0.26462591734400337,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7255216693418941,
+        "ppl": null
+      },
+      "output_hash": "sha256:e55a693b525564642bd61b57c97aa67db165c428a6144024af41ca4faff73f3a"
+    },
+    {
+      "id": "我的帝王生涯_0057",
+      "metrics": {
+        "style_distance": 0.9321648001783864,
+        "profile_gap_per_case": 0.33553905817436036,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7077922077922078,
+        "ppl": null
+      },
+      "output_hash": "sha256:103695c9181aed876863f214b30a64f0faf8c17c8c7177de9d42b3388f713ade"
+    },
+    {
+      "id": "我的帝王生涯_0063",
+      "metrics": {
+        "style_distance": 0.8696993187983554,
+        "profile_gap_per_case": 0.46315184093913164,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.49838187702265374,
+        "ppl": null
+      },
+      "output_hash": "sha256:f546ce086bdaf815b88dbd5f3592fa55759f6c630b0f64b6c216a295599c843f"
+    },
+    {
+      "id": "我的帝王生涯_0089",
+      "metrics": {
+        "style_distance": 0.8285151507128031,
+        "profile_gap_per_case": 0.40856989803333327,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7706708268330733,
+        "ppl": null
+      },
+      "output_hash": "sha256:8f3095ff3391bb5fe87cb228f90b90a0cdf77e34d7a4063dd6545ff550538e4b"
+    },
+    {
+      "id": "我的帝王生涯_0100",
+      "metrics": {
+        "style_distance": 0.7482763568386409,
+        "profile_gap_per_case": 0.4575874223683384,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6227106227106227,
+        "ppl": null
+      },
+      "output_hash": "sha256:92e69c511b322fe7d47992eb40573dd630fc2a1c201c5dd38570f805014b4736"
+    },
+    {
+      "id": "我的帝王生涯_0104",
+      "metrics": {
+        "style_distance": 0.6278968501289297,
+        "profile_gap_per_case": 1.0407704494824688,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6481481481481481,
+        "ppl": null
+      },
+      "output_hash": "sha256:d290cca29194f3a537ec1b3a57c9071716819f8ea5d0068e94c9ae3d40e9f4d5"
+    },
+    {
+      "id": "我的帝王生涯_0115",
+      "metrics": {
+        "style_distance": 1.1675470725165726,
+        "profile_gap_per_case": 0.3465463917833693,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6072041166380789,
+        "ppl": null
+      },
+      "output_hash": "sha256:47ac867c1fec9c54740044925fecf5d40ac58f8a5f93b7105f230c3186103fdf"
+    },
+    {
+      "id": "我的帝王生涯_0116",
+      "metrics": {
+        "style_distance": 1.314829757977149,
+        "profile_gap_per_case": 0.8137104022260762,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5215827338129496,
+        "ppl": null
+      },
+      "output_hash": "sha256:c6d0d29b1436bab7800f3c96558427e5da63f6795467d8391dda4346ee747f45"
+    },
+    {
+      "id": "我的帝王生涯_0130",
+      "metrics": {
+        "style_distance": 1.4840899604836981,
+        "profile_gap_per_case": 0.4168974604736489,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.25,
+        "style_win_rate": null,
+        "copy_ratio": 0.6456140350877193,
+        "ppl": null
+      },
+      "output_hash": "sha256:b71be8afa5946cd42d542933837e895a1c3956d2f26f0c18b5be8c601415e22b"
+    },
+    {
+      "id": "我的帝王生涯_0142",
+      "metrics": {
+        "style_distance": 0.8446888884063404,
+        "profile_gap_per_case": 0.4506131419913152,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5267857142857143,
+        "ppl": null
+      },
+      "output_hash": "sha256:ce73f7fdfd6592d78e848e52fa514215a727cf5692147462255f0f9fb51d31a1"
+    },
+    {
+      "id": "我的帝王生涯_0225",
+      "metrics": {
+        "style_distance": 0.7971191383244346,
+        "profile_gap_per_case": 0.5876703944874624,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.6666666666666666,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7955390334572491,
+        "ppl": null
+      },
+      "output_hash": "sha256:30caddf3c81d86f6a78ccefd18091ca5e6d2060734f976c5ab59c0f8fcea362f"
+    },
+    {
+      "id": "我的帝王生涯_0250",
+      "metrics": {
+        "style_distance": 1.1114635146316054,
+        "profile_gap_per_case": 0.5578205504476014,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5765124555160143,
+        "ppl": null
+      },
+      "output_hash": "sha256:fbd61729f74929a77d8374ef8dc765bcc8a0f948310805f46249c7bba29d7536"
+    },
+    {
+      "id": "我的帝王生涯_0267",
+      "metrics": {
+        "style_distance": 0.8787919640014454,
+        "profile_gap_per_case": 0.2609042258346646,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6232876712328768,
+        "ppl": null
+      },
+      "output_hash": "sha256:19dbf8d3d116bb523ed604d6453e2ef6b19d5f4eaab36f4044f034b545c0ca27"
+    },
+    {
+      "id": "我的帝王生涯_0276",
+      "metrics": {
+        "style_distance": 0.6185123158263616,
+        "profile_gap_per_case": 0.5372737859931784,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7197346600331676,
+        "ppl": null
+      },
+      "output_hash": "sha256:35041db59d74af3fac4215716c5cadb26a3c8f3e299f6e09462b0111c38de31d"
+    },
+    {
+      "id": "我的帝王生涯_0288",
+      "metrics": {
+        "style_distance": 0.4186530667713294,
+        "profile_gap_per_case": 0.6360282894880807,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5739644970414202,
+        "ppl": null
+      },
+      "output_hash": "sha256:794b3e7389f3aa9b9cce8b377fa840697d17630ed74e226e780df4327a8bdb36"
+    },
+    {
+      "id": "我的帝王生涯_0298",
+      "metrics": {
+        "style_distance": 0.8022511478849103,
+        "profile_gap_per_case": 0.5390001044786412,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5643939393939394,
+        "ppl": null
+      },
+      "output_hash": "sha256:873415c6015a5f5accbad8e05090931e8bd8f2a7ef0c55b0c6a2e4f3f1e96ee4"
+    },
+    {
+      "id": "我的帝王生涯_0321",
+      "metrics": {
+        "style_distance": 0.8142628915663578,
+        "profile_gap_per_case": 0.8692991702940928,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6353383458646616,
+        "ppl": null
+      },
+      "output_hash": "sha256:1a5c634b6aa519dde669ad9c0ebd33289cc2ca4275c31136da530942738b4800"
+    },
+    {
+      "id": "我的帝王生涯_0363",
+      "metrics": {
+        "style_distance": 0.9570570106708912,
+        "profile_gap_per_case": 0.7289134960200631,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5965583173996176,
+        "ppl": null
+      },
+      "output_hash": "sha256:eb4afa824c4c1fc63f2549e323aa57122028ed5af6ce9dd5b683bcb6db12bfdf"
+    },
+    {
+      "id": "我的帝王生涯_0367",
+      "metrics": {
+        "style_distance": 0.9035861654697639,
+        "profile_gap_per_case": 0.35835039519593154,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.6666666666666666,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.5464285714285714,
+        "ppl": null
+      },
+      "output_hash": "sha256:1b4ca37f4a40a2764aa26a60d1d1d7dd4a9bd4951d8a0b5699178e60b6fc58fd"
+    },
+    {
+      "id": "我的帝王生涯_0372",
+      "metrics": {
+        "style_distance": 0.8286953596865456,
+        "profile_gap_per_case": 0.37206326466430234,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6962457337883959,
+        "ppl": null
+      },
+      "output_hash": "sha256:fa3c81e8d56723498311437060e071c48466c66b54b8bf39ad1056162e6f93e2"
+    },
+    {
+      "id": "妻妾成群_0022",
+      "metrics": {
+        "style_distance": 0.7549096772352738,
+        "profile_gap_per_case": 0.729550448157896,
+        "entity_recall": 1.0,
+        "numeral_recall": 0.6,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7993366500829188,
+        "ppl": null
+      },
+      "output_hash": "sha256:0069874fb1d278b042482fa54c16e2a408bfc302b4e6ae74649b5ada71e33c33"
+    },
+    {
+      "id": "另一种妇女生活_0004",
+      "metrics": {
+        "style_distance": 2.042480804484328,
+        "profile_gap_per_case": 0.8066208415813527,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.6678141135972461,
+        "ppl": null
+      },
+      "output_hash": "sha256:6149f14e296f714d113860b705c98a35989421bb35073555716c6efe0a29a83c"
+    },
+    {
+      "id": "园艺_0091",
+      "metrics": {
+        "style_distance": 0.9793235045480235,
+        "profile_gap_per_case": 0.19649030214104135,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8712871287128713,
+        "ppl": null
+      },
+      "output_hash": "sha256:e9e5e8ad03a0c96d9077f34784bea25f19864324263a24a6d8fde462d72e75fe"
+    },
+    {
+      "id": "罂粟之家_0052",
+      "metrics": {
+        "style_distance": 0.6109471754898128,
+        "profile_gap_per_case": 0.6236720759345767,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.7152542372881356,
+        "ppl": null
+      },
+      "output_hash": "sha256:d1574262a92b660c77c0386f10e5977da67824a4f286da14140197ea42ce8048"
+    },
+    {
+      "id": "我的帝王生涯_0023",
+      "metrics": {
+        "style_distance": 0.8567397721505178,
+        "profile_gap_per_case": 0.5456894029864486,
+        "entity_recall": 1.0,
+        "numeral_recall": 1.0,
+        "hallucination_rate": 0.0,
+        "style_win_rate": null,
+        "copy_ratio": 0.8412698412698413,
+        "ppl": null
+      },
+      "output_hash": "sha256:7b0fcfd63707b78a1d6afb53cc699fe6a29a78a87da6012e45eca4e746c5b0d9"
+    }
+  ]
+}

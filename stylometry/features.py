@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 
 import jieba
@@ -10,6 +11,10 @@ from numpy.typing import NDArray
 
 from stylometry.lexicon import LiteraryLexicon
 
+# Private segmenter: never load a user dictionary. eval.fidelity writes names into
+# the global jieba dict; sharing it would make style features depend on call order.
+jieba.setLogLevel(logging.WARNING)
+_tokenizer: jieba.Tokenizer | None = None
 FEATURE_NAMES: tuple[str, ...] = (
     "sent_len_mean",
     "sent_len_std",
@@ -44,8 +49,15 @@ CJK_NUMERALS = frozenset("零〇一二两三四五六七八九十百千万亿")
 ARABIC_NUMERALS = frozenset("0123456789０１２３４５６７８９")
 
 
+def _segmenter() -> jieba.Tokenizer:
+    global _tokenizer
+    if _tokenizer is None:
+        _tokenizer = jieba.Tokenizer()
+    return _tokenizer
+
+
 def _tokens(text: str) -> list[str]:
-    return [token for token in jieba.lcut(text) if token.strip()]
+    return [token for token in _segmenter().lcut(text) if token.strip()]
 
 
 def _sentences(text: str) -> list[str]:

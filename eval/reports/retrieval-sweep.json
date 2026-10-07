@@ -1,0 +1,821 @@
+{
+  "changelog_markdown": "主配置是 balanced、k = 2，对照是同一次扫描的 k = 0。\n其余组合是探索性的，不替换 README 的 retrieval 行。style_win_rate 本轮不跑。\n\n| 指标 | 均值差（主 − 对照） | 95% 区间 | 结论 |\n|---|---|---|---|\n| profile_gap_per_case | -0.028729 | [-0.060864, 0.003425] | 未检出差异 |\n| hallucination_rate | -0.009887 | [-0.025424, 0.000000] | 未检出差异 |\n| entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| numeral_recall | 0.030508 | [-0.003390, 0.070056] | 未检出差异 |\n| copy_ratio | 0.032760 | [0.019210, 0.047696] | 只报告 |\n| style_distance | 0.007010 | [-0.052414, 0.066518] | 只报告 |\n| profile_gap | 0.010471 | — | 只报点估计 |\n\n| 组合 | 角色 | style_distance | profile_gap | profile_gap_per_case | entity_recall | numeral_recall | hallucination_rate | copy_ratio |\n|---|---|---|---|---|---|---|---|---|\n| retrieval-k0 | 对照 | 0.922513 | 0.203816 | 0.513992 | 1.000000 | 0.861017 | 0.014124 | 0.709247 |\n| retrieval-equal-k1 | 探索性 | 0.908714 | 0.205450 | 0.497898 | 1.000000 | 0.875141 | 0.004237 | 0.745687 |\n| retrieval-equal-k2 | 探索性 | 0.926546 | 0.204620 | 0.467228 | 1.000000 | 0.892090 | 0.004237 | 0.749246 |\n| retrieval-equal-k3 | 探索性 | 0.996126 | 0.189797 | 0.483773 | 1.000000 | 0.883616 | 0.004237 | 0.761473 |\n| retrieval-balanced-k1 | 探索性 | 0.919984 | 0.192274 | 0.508809 | 1.000000 | 0.886441 | 0.004237 | 0.731873 |\n| retrieval-balanced-k2 | 主配置 | 0.929522 | 0.214287 | 0.485262 | 1.000000 | 0.891525 | 0.004237 | 0.742007 |\n| retrieval-balanced-k3 | 探索性 | 0.918607 | 0.216889 | 0.470503 | 1.000000 | 0.863277 | 0.004237 | 0.753109 |\n| retrieval-content-k1 | 探索性 | 0.913444 | 0.217614 | 0.493708 | 1.000000 | 0.875141 | 0.004237 | 0.747112 |\n| retrieval-content-k2 | 探索性 | 0.922507 | 0.189182 | 0.455869 | 1.000000 | 0.892090 | 0.004237 | 0.753631 |\n| retrieval-content-k3 | 探索性 | 0.986370 | 0.187597 | 0.472459 | 1.000000 | 0.889266 | 0.004237 | 0.762296 |\n| retrieval-style-k1 | 探索性 | 0.911608 | 0.205993 | 0.498544 | 1.000000 | 0.886441 | 0.004237 | 0.729564 |\n| retrieval-style-k2 | 探索性 | 0.933805 | 0.183188 | 0.495522 | 1.000000 | 0.844350 | 0.004237 | 0.739132 |\n| retrieval-style-k3 | 探索性 | 0.940808 | 0.178332 | 0.501536 | 1.000000 | 0.889548 | 0.004237 | 0.746687 |\n\n| 目标 | 阈值 | 主配置 | 达到 |\n|---|---|---|---|\n| numeral_recall | >= 0.92 | 0.891525 | 未达到 |\n| hallucination_rate | <= 0.005 | 0.004237 | 达到 |\n| profile_gap | < 0.204 | 0.214287 | 未达到 |\n",
+  "diagnostics": {
+    "retrieval-balanced-k1": {
+      "exemplar_copy_ratio": {
+        "max": 0.08365019011406843,
+        "mean": 0.047052022701054005,
+        "median": 0.04551920341394026,
+        "min": 0.0111731843575419,
+        "q1": 0.03305561200298042,
+        "q3": 0.06165264142122487,
+        "std": 0.01854563765317891
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-balanced-k2": {
+      "exemplar_copy_ratio": {
+        "max": 0.09541984732824428,
+        "mean": 0.057263053808658496,
+        "median": 0.05871559633027523,
+        "min": 0.01859229747675963,
+        "q1": 0.047160127737226276,
+        "q3": 0.06810451453308597,
+        "std": 0.015485193562110535
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-balanced-k3": {
+      "exemplar_copy_ratio": {
+        "max": 0.10488245931283906,
+        "mean": 0.06248024116130677,
+        "median": 0.0650994575045208,
+        "min": 0.03377110694183865,
+        "q1": 0.05127908141544164,
+        "q3": 0.07185615861640864,
+        "std": 0.014676888494540406
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-content-k1": {
+      "exemplar_copy_ratio": {
+        "max": 0.10229276895943562,
+        "mean": 0.05960513609626032,
+        "median": 0.059369202226345084,
+        "min": 0.01675041876046901,
+        "q1": 0.04530496763930883,
+        "q3": 0.07334646236610788,
+        "std": 0.020408678310147907
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-content-k2": {
+      "exemplar_copy_ratio": {
+        "max": 0.11854684512428298,
+        "mean": 0.06794980031433824,
+        "median": 0.06378986866791744,
+        "min": 0.030100334448160536,
+        "q1": 0.05480544832289509,
+        "q3": 0.07989232989232989,
+        "std": 0.018298662650835906
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-content-k3": {
+      "exemplar_copy_ratio": {
+        "max": 0.11478260869565217,
+        "mean": 0.07073681293909534,
+        "median": 0.0668693009118541,
+        "min": 0.04509283819628647,
+        "q1": 0.0592117134534581,
+        "q3": 0.08152711307993513,
+        "std": 0.01694930814971665
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-equal-k1": {
+      "exemplar_copy_ratio": {
+        "max": 0.10229276895943562,
+        "mean": 0.05660238587995704,
+        "median": 0.05671077504725898,
+        "min": 0.01675041876046901,
+        "q1": 0.041919015190259576,
+        "q3": 0.07140174379611,
+        "std": 0.02101216519812366
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-equal-k2": {
+      "exemplar_copy_ratio": {
+        "max": 0.1012216404886562,
+        "mean": 0.06611518717324184,
+        "median": 0.06597222222222222,
+        "min": 0.02,
+        "q1": 0.05707703686614056,
+        "q3": 0.07393024092053219,
+        "std": 0.016124093384574843
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-equal-k3": {
+      "exemplar_copy_ratio": {
+        "max": 0.12195121951219512,
+        "mean": 0.07122176435964775,
+        "median": 0.0668693009118541,
+        "min": 0.04509283819628647,
+        "q1": 0.05994491013217605,
+        "q3": 0.08085303490698881,
+        "std": 0.017174600767661287
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-k0": {
+      "exemplar_copy_ratio": {
+        "max": 0.09660107334525939,
+        "mean": 0.05868260446556471,
+        "median": 0.05825242718446602,
+        "min": 0.01996007984031936,
+        "q1": 0.04471243042671614,
+        "q3": 0.07064412655991963,
+        "std": 0.016170958607678646
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-style-k1": {
+      "exemplar_copy_ratio": {
+        "max": 0.09195402298850575,
+        "mean": 0.03906573296144916,
+        "median": 0.0390625,
+        "min": 0.008130081300813009,
+        "q1": 0.027948131197559116,
+        "q3": 0.04888922935498698,
+        "std": 0.017090622577851395
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-style-k2": {
+      "exemplar_copy_ratio": {
+        "max": 0.09487666034155598,
+        "mean": 0.04687760618857579,
+        "median": 0.04674457429048414,
+        "min": 0.0199203187250996,
+        "q1": 0.03872394661868346,
+        "q3": 0.053589007383100906,
+        "std": 0.013693217867245002
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    },
+    "retrieval-style-k3": {
+      "exemplar_copy_ratio": {
+        "max": 0.09523809523809523,
+        "mean": 0.05010655899887096,
+        "median": 0.048507462686567165,
+        "min": 0.024,
+        "q1": 0.03980825193764946,
+        "q3": 0.06000112504177545,
+        "std": 0.013902113957129451
+      },
+      "exemplar_entity_leak": {
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "q1": 0.0,
+        "q3": 0.0,
+        "std": 0.0
+      }
+    }
+  },
+  "groups": [
+    {
+      "aggregate": {
+        "copy_ratio": 0.7092469288384025,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.014124293785310733,
+        "numeral_recall": 0.8610169491525423,
+        "profile_gap": 0.20381635390888558,
+        "profile_gap_per_case": 0.5139916710537897,
+        "style_distance": 0.9225125975073157,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.09660107334525939,
+          "mean": 0.05868260446556471,
+          "median": 0.05825242718446602,
+          "min": 0.01996007984031936,
+          "q1": 0.04471243042671614,
+          "q3": 0.07064412655991963,
+          "std": 0.016170958607678646
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": null,
+      "k": 0,
+      "name": "retrieval-k0",
+      "role": "对照"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7456871715721097,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8751412429378531,
+        "profile_gap": 0.20544960656944444,
+        "profile_gap_per_case": 0.4978981759703717,
+        "style_distance": 0.908713851608869,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.10229276895943562,
+          "mean": 0.05660238587995704,
+          "median": 0.05671077504725898,
+          "min": 0.01675041876046901,
+          "q1": 0.041919015190259576,
+          "q3": 0.07140174379611,
+          "std": 0.02101216519812366
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "equal",
+      "k": 1,
+      "name": "retrieval-equal-k1",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7492464052181296,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.892090395480226,
+        "profile_gap": 0.20461962567082875,
+        "profile_gap_per_case": 0.46722755780217035,
+        "style_distance": 0.9265463117156997,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.1012216404886562,
+          "mean": 0.06611518717324184,
+          "median": 0.06597222222222222,
+          "min": 0.02,
+          "q1": 0.05707703686614056,
+          "q3": 0.07393024092053219,
+          "std": 0.016124093384574843
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "equal",
+      "k": 2,
+      "name": "retrieval-equal-k2",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7614729166698763,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8836158192090395,
+        "profile_gap": 0.18979704400383185,
+        "profile_gap_per_case": 0.4837732812860624,
+        "style_distance": 0.9961256879571246,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.12195121951219512,
+          "mean": 0.07122176435964775,
+          "median": 0.0668693009118541,
+          "min": 0.04509283819628647,
+          "q1": 0.05994491013217605,
+          "q3": 0.08085303490698881,
+          "std": 0.017174600767661287
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "equal",
+      "k": 3,
+      "name": "retrieval-equal-k3",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7318731105110718,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8864406779661016,
+        "profile_gap": 0.19227391516714126,
+        "profile_gap_per_case": 0.5088086813234938,
+        "style_distance": 0.9199837955445805,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.08365019011406843,
+          "mean": 0.047052022701054005,
+          "median": 0.04551920341394026,
+          "min": 0.0111731843575419,
+          "q1": 0.03305561200298042,
+          "q3": 0.06165264142122487,
+          "std": 0.01854563765317891
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "balanced",
+      "k": 1,
+      "name": "retrieval-balanced-k1",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7420065238390928,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8915254237288136,
+        "profile_gap": 0.21428747508553264,
+        "profile_gap_per_case": 0.48526247805497336,
+        "style_distance": 0.9295221674830721,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.09541984732824428,
+          "mean": 0.057263053808658496,
+          "median": 0.05871559633027523,
+          "min": 0.01859229747675963,
+          "q1": 0.047160127737226276,
+          "q3": 0.06810451453308597,
+          "std": 0.015485193562110535
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "balanced",
+      "k": 2,
+      "name": "retrieval-balanced-k2",
+      "role": "主配置"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7531089731866877,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8632768361581921,
+        "profile_gap": 0.21688946462454517,
+        "profile_gap_per_case": 0.47050251161666035,
+        "style_distance": 0.9186069160888277,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.10488245931283906,
+          "mean": 0.06248024116130677,
+          "median": 0.0650994575045208,
+          "min": 0.03377110694183865,
+          "q1": 0.05127908141544164,
+          "q3": 0.07185615861640864,
+          "std": 0.014676888494540406
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "balanced",
+      "k": 3,
+      "name": "retrieval-balanced-k3",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7471118409968244,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8751412429378531,
+        "profile_gap": 0.21761418223818924,
+        "profile_gap_per_case": 0.4937084889709751,
+        "style_distance": 0.9134435504582414,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.10229276895943562,
+          "mean": 0.05960513609626032,
+          "median": 0.059369202226345084,
+          "min": 0.01675041876046901,
+          "q1": 0.04530496763930883,
+          "q3": 0.07334646236610788,
+          "std": 0.020408678310147907
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "content",
+      "k": 1,
+      "name": "retrieval-content-k1",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7536307177174026,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.892090395480226,
+        "profile_gap": 0.1891824273000893,
+        "profile_gap_per_case": 0.45586877022560224,
+        "style_distance": 0.9225068667805081,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.11854684512428298,
+          "mean": 0.06794980031433824,
+          "median": 0.06378986866791744,
+          "min": 0.030100334448160536,
+          "q1": 0.05480544832289509,
+          "q3": 0.07989232989232989,
+          "std": 0.018298662650835906
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "content",
+      "k": 2,
+      "name": "retrieval-content-k2",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7622964048738634,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8892655367231639,
+        "profile_gap": 0.18759712417885227,
+        "profile_gap_per_case": 0.47245902705972426,
+        "style_distance": 0.9863697021940372,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.11478260869565217,
+          "mean": 0.07073681293909534,
+          "median": 0.0668693009118541,
+          "min": 0.04509283819628647,
+          "q1": 0.0592117134534581,
+          "q3": 0.08152711307993513,
+          "std": 0.01694930814971665
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "content",
+      "k": 3,
+      "name": "retrieval-content-k3",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.729564185179886,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8864406779661016,
+        "profile_gap": 0.2059930882278876,
+        "profile_gap_per_case": 0.4985441212697211,
+        "style_distance": 0.9116078575324613,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.09195402298850575,
+          "mean": 0.03906573296144916,
+          "median": 0.0390625,
+          "min": 0.008130081300813009,
+          "q1": 0.027948131197559116,
+          "q3": 0.04888922935498698,
+          "std": 0.017090622577851395
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "style",
+      "k": 1,
+      "name": "retrieval-style-k1",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7391316970595915,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8443502824858756,
+        "profile_gap": 0.18318812523353295,
+        "profile_gap_per_case": 0.4955221122268962,
+        "style_distance": 0.9338048881203773,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.09487666034155598,
+          "mean": 0.04687760618857579,
+          "median": 0.04674457429048414,
+          "min": 0.0199203187250996,
+          "q1": 0.03872394661868346,
+          "q3": 0.053589007383100906,
+          "std": 0.013693217867245002
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "style",
+      "k": 2,
+      "name": "retrieval-style-k2",
+      "role": "探索性"
+    },
+    {
+      "aggregate": {
+        "copy_ratio": 0.7466867788790703,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "numeral_recall": 0.8895480225988701,
+        "profile_gap": 0.17833173363884558,
+        "profile_gap_per_case": 0.5015363008026931,
+        "style_distance": 0.9408078072575013,
+        "style_win_rate": null
+      },
+      "diagnostics": {
+        "exemplar_copy_ratio": {
+          "max": 0.09523809523809523,
+          "mean": 0.05010655899887096,
+          "median": 0.048507462686567165,
+          "min": 0.024,
+          "q1": 0.03980825193764946,
+          "q3": 0.06000112504177545,
+          "std": 0.013902113957129451
+        },
+        "exemplar_entity_leak": {
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "q1": 0.0,
+          "q3": 0.0,
+          "std": 0.0
+        }
+      },
+      "fusion_config": "style",
+      "k": 3,
+      "name": "retrieval-style-k3",
+      "role": "探索性"
+    }
+  ],
+  "primary": {
+    "config": "balanced",
+    "control": "retrieval-k0",
+    "diagnostics": {
+      "exemplar_copy_ratio": {
+        "control_mean": 0.05868260446556471,
+        "high": 0.0007439761349335699,
+        "low": -0.003515738128308923,
+        "main_mean": 0.057263053808658496,
+        "mean_diff": -0.0014195506569062183
+      },
+      "exemplar_entity_leak": {
+        "control_mean": 0.0,
+        "high": 0.0,
+        "low": 0.0,
+        "main_mean": 0.0,
+        "mean_diff": 0.0
+      }
+    },
+    "k": 2,
+    "metrics": {
+      "copy_ratio": {
+        "conclusion": null,
+        "high": 0.047696217039535194,
+        "low": 0.019210070558297175,
+        "mean_diff": 0.03275959500069019
+      },
+      "entity_recall": {
+        "conclusion": "未检出差异",
+        "high": 0.0,
+        "low": 0.0,
+        "mean_diff": 0.0
+      },
+      "hallucination_rate": {
+        "conclusion": "未检出差异",
+        "high": 0.0,
+        "low": -0.025423728813559324,
+        "mean_diff": -0.009887005649717513
+      },
+      "numeral_recall": {
+        "conclusion": "未检出差异",
+        "high": 0.07005649717514123,
+        "low": -0.003389830508474579,
+        "mean_diff": 0.030508474576271188
+      },
+      "profile_gap": {
+        "conclusion": null,
+        "control": 0.20381635390888558,
+        "diff": 0.010471121176647058,
+        "main": 0.21428747508553264
+      },
+      "profile_gap_per_case": {
+        "conclusion": "未检出差异",
+        "high": 0.0034247113651195695,
+        "low": -0.06086385771501095,
+        "mean_diff": -0.02872919299881622
+      },
+      "style_distance": {
+        "conclusion": null,
+        "high": 0.06651818021035719,
+        "low": -0.0524136744539234,
+        "mean_diff": 0.0070095699757564845
+      }
+    }
+  },
+  "targets": {
+    "hallucination_rate": {
+      "met": true,
+      "op": "<=",
+      "threshold": 0.005,
+      "value": 0.00423728813559322
+    },
+    "numeral_recall": {
+      "met": false,
+      "op": ">=",
+      "threshold": 0.92,
+      "value": 0.8915254237288136
+    },
+    "profile_gap": {
+      "met": false,
+      "op": "<",
+      "threshold": 0.204,
+      "value": 0.21428747508553264
+    }
+  },
+  "timestamp": "2026-10-07T21:07:58Z"
+}

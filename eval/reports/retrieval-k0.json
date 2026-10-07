@@ -1,10 +1,10 @@
 {
-  "run_id": "lora-eval59",
-  "timestamp": "2026-10-07T21:07:21Z",
-  "pipeline": "baseline",
+  "run_id": "retrieval-k0",
+  "timestamp": "2026-10-07T21:07:32Z",
+  "pipeline": "retrieval",
   "model": "sutong-v2",
   "config": {
-    "pipeline": "baseline",
+    "pipeline": "retrieval",
     "model": "unknown",
     "seed": 42,
     "cases": "corpus/pairs.jsonl",

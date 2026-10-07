@@ -5,9 +5,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from eval.fidelity import ensure_manual_userdict
 from stylometry.distance import STD_FLOOR, StyleReference
 from stylometry.features import FEATURE_NAMES, extract
 from stylometry.lexicon import LiteraryLexicon, build_lexicon, lexicon_payload
+
+# Contains a gazetteer name so a polluted global jieba would retokenize it.
+_NAME_TEXT = "颂莲坐在井边，陈佐千没有说话。"
 
 
 def _vector(text: str, lexicon: LiteraryLexicon | None = None) -> dict[str, float]:
@@ -138,3 +142,32 @@ def test_public_originals_are_closer_than_their_vernaculars() -> None:
         original < vernacular for original, vernacular in zip(originals, vernaculars, strict=True)
     )
     assert float(np.mean(originals)) < float(np.mean(vernaculars))
+
+
+def test_extract_unaffected_by_global_userdict() -> None:
+    lexicon = LiteraryLexicon.model_validate_json(
+        Path("stylometry/data/lexicon.json").read_text(encoding="utf-8")
+    )
+    before = extract(_NAME_TEXT, lexicon)
+    ensure_manual_userdict()
+    after = extract(_NAME_TEXT, lexicon)
+    np.testing.assert_array_equal(before, after)
+
+
+def test_style_reference_unaffected_by_global_userdict() -> None:
+    lexicon = LiteraryLexicon.model_validate_json(
+        Path("stylometry/data/lexicon.json").read_text(encoding="utf-8")
+    )
+    payload = json.loads(Path("stylometry/data/style_reference.json").read_text(encoding="utf-8"))
+    reference = StyleReference(
+        mean=np.array(payload["mean"], dtype=np.float64),
+        std=np.array(payload["std"], dtype=np.float64),
+        lexicon=lexicon,
+    )
+    z_before = reference.zscore(_NAME_TEXT)
+    d_before = reference.distance(_NAME_TEXT)
+    ensure_manual_userdict()
+    z_after = reference.zscore(_NAME_TEXT)
+    d_after = reference.distance(_NAME_TEXT)
+    np.testing.assert_array_equal(z_before, z_after)
+    assert d_before == d_after
