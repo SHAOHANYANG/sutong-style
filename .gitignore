@@ -43,6 +43,7 @@ venv/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+.tmp-pytest/
 .coverage
 coverage.xml
 htmlcov/

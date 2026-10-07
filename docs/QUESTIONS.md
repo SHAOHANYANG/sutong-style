@@ -1,5 +1,27 @@
 # QUESTIONS
 
+## Q27 — Agent 骨架的终止字段、recursion_limit 与状态形状（2026-10-07，按假设实现）
+
+**问题**
+SPEC §4.4 改了挑选规则，但没有写对外结果模型的字段名，也没有写「轮数用尽」和「正常接受」怎么区分。
+`recursion_limit` 要写成具名常量并在注释里写算式，具体取多少、余量多少没有写。
+触发 recursion_limit 时 LangGraph 抛异常会丢掉状态，怎么仍返回最好一版，没有写。
+状态里 `violations` 是「当前一轮」还是「每轮一份」，SPEC 的 TypedDict 只有一个 list。
+打分阈值的默认值、以及分数恰好等于阈值时走哪条边，没有写。
+`Exemplar` / `Violation` 是复用 `retrieval.prompt` 与 `eval.fidelity`，还是在 `agent/` 里再定义一份，没有写。
+
+**假设**
+结果模型是 `AgentResult`：`output`、`selected_round`、`total_rounds`、`termination`、`fallback_kind`、`rounds`、`re_retrieved`、`trace`。
+`termination` 取 `accepted` / `max_rounds` / `recursion_limit` / `fallback`；兜底种类在 `fallback_kind`（`first_round_error` / `later_round_error` / `all_blank`）。
+到了 3 轮仍有违规，或无违规但分数仍低于阈值且不能再换范例 → `max_rounds`；无违规且分数达标（或已换过范例后分数仍低但只能接受）→ `accepted`。
+`RECURSION_LIMIT = 20`，算式是 `1 + 3*4 + 1 + 6`（一次初始 retrieve、三轮各 4 个节点、一次 re_retrieve 的额外 retrieve、余量 6）。用副作用盒子在每次节点后保存合并状态，捕获 `GraphRecursionError` 后从盒子构造结果。
+状态里保留 `last_violations` 给路由，另用 `violation_counts` / `scores` / `candidates` 平行列表给挑选；完整 `Violation` 对象不逐轮存进结果，结果只留条数。
+阈值必须由调用方传入，没有默认值。`score < threshold` 才 `re_retrieve`，相等视为达标。
+复用 `retrieval.prompt.Exemplar` 与 `eval.fidelity.Violation`，不另定义。
+
+**影响范围**
+`agent/`、`tests/test_agent_graph.py`、`tests/fakes.py`。§4.6 及之后的预注册不改。T2.2 起再接真实校验与打分。
+
 ## Q26 — 扫描文件名、诊断量方向与自助法插值（2026-10-07，按假设实现）
 
 **问题**

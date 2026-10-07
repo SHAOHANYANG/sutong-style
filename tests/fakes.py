@@ -5,11 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Callable, Sequence
 
 import numpy as np
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
 
+from eval.fidelity import Violation
+from retrieval.prompt import Exemplar
 from scripts.rebuild_reporting import ModelIdentityMismatchError, ProviderMetadata
 
 
@@ -139,3 +142,89 @@ class FakeEmbedder:
         digest = hashlib.sha256(text.encode("utf-8")).digest()
         seed = int.from_bytes(digest[:8], "big")
         return np.random.default_rng(seed).standard_normal(self.dim)
+
+
+class FakeAgentRetriever:
+    """Programmable exemplar lists, keyed by call index."""
+
+    def __init__(self, batches: Sequence[Sequence[Exemplar]] | None = None) -> None:
+        self.batches = [list(batch) for batch in (batches or [[]])]
+        self.calls: list[str] = []
+
+    def retrieve(self, vernacular: str) -> list[Exemplar]:
+        self.calls.append(vernacular)
+        index = min(len(self.calls) - 1, len(self.batches) - 1)
+        return list(self.batches[index])
+
+
+class FakeAgentGenerator:
+    """Programmable chat completions. Call count and message args are recorded."""
+
+    def __init__(
+        self,
+        outputs: Sequence[str] | None = None,
+        *,
+        errors_on: Sequence[int] | None = None,
+    ) -> None:
+        self.outputs = list(outputs) if outputs is not None else ["生成结果"]
+        self.errors_on = set(errors_on or [])
+        self.calls: list[list[dict[str, str]]] = []
+
+    def generate(self, messages: list[dict[str, str]]) -> str:
+        self.calls.append(list(messages))
+        call_index = len(self.calls) - 1
+        if call_index in self.errors_on:
+            raise RuntimeError(f"fake generator failure on call {call_index}")
+        if call_index >= len(self.outputs):
+            return self.outputs[-1]
+        return self.outputs[call_index]
+
+
+class FakeAgentVerifier:
+    """Programmable violation lists by call index."""
+
+    def __init__(
+        self,
+        batches: Sequence[Sequence[Violation]] | None = None,
+        *,
+        always: Sequence[Violation] | None = None,
+    ) -> None:
+        if always is not None:
+            self._always: list[Violation] | None = list(always)
+            self.batches: list[list[Violation]] = []
+        else:
+            self._always = None
+            self.batches = [list(batch) for batch in (batches or [[]])]
+        self.calls: list[tuple[str, str]] = []
+
+    def verify(self, vernacular: str, output: str) -> list[Violation]:
+        self.calls.append((vernacular, output))
+        if self._always is not None:
+            return list(self._always)
+        index = min(len(self.calls) - 1, len(self.batches) - 1)
+        return list(self.batches[index])
+
+
+class FakeAgentScorer:
+    """Programmable scores by call index. Higher is better."""
+
+    def __init__(
+        self,
+        values: Sequence[float] | None = None,
+        *,
+        always: float | None = None,
+        fn: Callable[[str], float] | None = None,
+    ) -> None:
+        self.values = list(values) if values is not None else [1.0]
+        self.always = always
+        self.fn = fn
+        self.calls: list[str] = []
+
+    def score(self, output: str) -> float:
+        self.calls.append(output)
+        if self.fn is not None:
+            return float(self.fn(output))
+        if self.always is not None:
+            return float(self.always)
+        index = min(len(self.calls) - 1, len(self.values) - 1)
+        return float(self.values[index])

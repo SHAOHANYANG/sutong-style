@@ -743,24 +743,33 @@ retrieve → generate → verify → score → route
 
 route ─┬─ "accept"      → END
        ├─ "revise"      → generate     （带 violations 作定向反馈）
-       └─ "re_retrieve" → retrieve      （风格分过低时换范例）
+       └─ "re_retrieve" → retrieve      （分数过低时换范例）
 ```
 
-路由规则：
+路由规则（`iter` = 生成器被调用的次数，上限 3；换范例只允许一次）：
 
+- 当前这一版是空白（空串或只有空白字符）且 `iter < 3` → `revise`（空白不送校验/打分，但仍占一轮；轮数用尽才走兜底）
 - 保真有违规 且 `iter < 3` → `revise`
-- 保真通过 但 `style_distance` 高于阈值 且 `iter < 3` 且 还没换过范例 → `re_retrieve`
+- 保真通过 但分数**低于**阈值 且 `iter < 3` 且 还没换过范例 → `re_retrieve`
 - 否则 → `accept`
+
+分数由注入的打分器给出，约定**越大越好**。不要把这里写成「`style_distance` 高于阈值」——§3.1 已更正 `style_distance` 的目标是趋近 1.0，不是越低越好；真实打分定义在 T2.2，骨架不对它做假设。阈值作为构造参数传入，不硬编码在路由里。
 
 **终止规则**：
 
 - `iter >= 3` 强制结束
-- 同时设置 LangGraph 的 `recursion_limit`（双保险）
-- 结束时返回 `candidates[argmax(scores)]` —— **永不返回失败，永不返回空**
+- 同时设置 LangGraph 的 `recursion_limit`（双保险；触发时仍返回已有最好一版，并标明由此终止）
+- 结束时按字典序挑选最终输出，**不要**用 `candidates[argmax(scores)]`：
+  1. 违规条数最少的优先；
+  2. 条数相同，分数高的优先；
+  3. 仍相同，轮次靠前的优先（保证确定）。
+  空白输出（空串或只有空白字符）不参与挑选。
+  理由：若第 1 版文风分高但写错了数字，第 2 版改对了数字而文风分略低，按 argmax(scores) 会把写错的第 1 版交出去，返工等于白做；治事实漂移正是这个环存在的理由。
+- **永不返回失败，永不返回空**：生成器异常或全部空白时返回输入白话，结果里必须标明是哪一种兜底
 
-**环内只允许确定性指标。** `verify` 用 3.2 的规则指标，`score` 用 2.3 的风格距离。LLM judge 一轮几秒、三轮直接超时，所以它只能离线用。这个「离线评估与在线 reward 用不同精度指标」的分层是本项目核心设计取舍，不要改。
+**环内只允许确定性指标。** `verify` 用 3.2 的规则指标，`score` 用注入的确定性打分器。LLM judge 一轮几秒、三轮直接超时，所以它只能离线用。这个「离线评估与在线 reward 用不同精度指标」的分层是本项目核心设计取舍，不要改。
 
-`trace` 每个节点追加一条 `TraceEvent{node, ts, duration_ms, payload}`，直接喂给前端可视化面板（Phase 4）。
+`trace` 每个节点追加一条记录。T2.1 骨架只记 `{node, round}`；完整的 `TraceEvent{node, ts, duration_ms, payload}` 在 T2.4 落地，直接喂给前端可视化面板（Phase 4）。
 
 ### 4.5 revise 的 prompt 构造
 

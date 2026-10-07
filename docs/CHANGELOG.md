@@ -4,6 +4,12 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-07 EDT T2.1：Agent 自检重写环图骨架
+
+搭了 `agent/`：`retrieve → generate → verify → score → route`，四个外部能力全部 Protocol 注入，测试只用 Fake。生成上限 `MAX_GENERATIONS = 3`，`RECURSION_LIMIT = 20`（最长合法路径 14 步 + 余量 6）。结束挑选按违规条数 → 分数 → 轮次字典序，不再用 argmax(scores)；SPEC §4.4 已改，理由写在那里。
+
+本轮没有接真实检索、保真、风格距离，也没有修订 prompt。没有新的评估数字。依赖加了 `langgraph`（间接会有 `langchain-core`，代码里不得直接 import）。
+
 ## 2026-10-07 EDT T1.5 后半之二：k 扫描脚本与判定规则
 
 判定规则在看到扫描结果之前单独提交（`b10d57e`），写在 SPEC §4.7。§4.6 没有改。主配置仍是 balanced、k = 2，对照是同一次扫描的 k = 0。
