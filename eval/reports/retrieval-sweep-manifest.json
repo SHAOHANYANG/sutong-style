@@ -1,0 +1,237 @@
+{
+  "adapter": "adapters/sutong-v2/adapter",
+  "commit": "b1aa6e86ea59fecc34a2921cb5465818d5324c8c",
+  "groups": {
+    "retrieval-balanced-k1": {
+      "fusion_config": "balanced",
+      "k": 1,
+      "n": 59,
+      "output_sha256": "6e497043bf5b6d10c4ae41cbfcf93f988838dbf7a20891ef0c5d061027c9ad0f",
+      "prompt_tokens": {
+        "max": 924.0,
+        "mean": 722.542372881356,
+        "median": 713.0,
+        "min": 623.0,
+        "q1": 678.0,
+        "q3": 760.0,
+        "std": 66.06527897386688
+      },
+      "reused": 24,
+      "seconds": 390.8227242810008
+    },
+    "retrieval-balanced-k2": {
+      "fusion_config": "balanced",
+      "k": 2,
+      "n": 59,
+      "output_sha256": "72c18b989f06b0cd46be7d40edbbe46654589be8a3f218c06a2ba7593d0c5dee",
+      "prompt_tokens": {
+        "max": 1395.0,
+        "mean": 1170.2372881355932,
+        "median": 1165.0,
+        "min": 1007.0,
+        "q1": 1100.0,
+        "q3": 1210.5,
+        "std": 80.98594541868148
+      },
+      "reused": 11,
+      "seconds": 582.1396040580003
+    },
+    "retrieval-balanced-k3": {
+      "fusion_config": "balanced",
+      "k": 3,
+      "n": 59,
+      "output_sha256": "8761b598c32dc53c71332bed0d4140b4da4fcb527a26f8ceab90e7cba2eecb58",
+      "prompt_tokens": {
+        "max": 1903.0,
+        "mean": 1617.9661016949153,
+        "median": 1600.0,
+        "min": 1451.0,
+        "q1": 1555.0,
+        "q3": 1674.5,
+        "std": 97.58958788961165
+      },
+      "reused": 2,
+      "seconds": 727.7631398310004
+    },
+    "retrieval-content-k1": {
+      "fusion_config": "content",
+      "k": 1,
+      "n": 59,
+      "output_sha256": "d38c755846a817c7645887db7904de0d7f4d28cd8a4635825cdea93f56ea4335",
+      "prompt_tokens": {
+        "max": 924.0,
+        "mean": 732.6440677966102,
+        "median": 724.0,
+        "min": 616.0,
+        "q1": 690.5,
+        "q3": 759.5,
+        "std": 63.240397599459925
+      },
+      "reused": 40,
+      "seconds": 209.06484869199994
+    },
+    "retrieval-content-k2": {
+      "fusion_config": "content",
+      "k": 2,
+      "n": 59,
+      "output_sha256": "531c37334d5f50a848720214e4e0cdd3c7cffe9d1bafce0236800872d6ec7dc5",
+      "prompt_tokens": {
+        "max": 1543.0,
+        "mean": 1183.8474576271187,
+        "median": 1174.0,
+        "min": 1060.0,
+        "q1": 1118.0,
+        "q3": 1226.5,
+        "std": 88.30433000100375
+      },
+      "reused": 36,
+      "seconds": 240.98435121699913
+    },
+    "retrieval-content-k3": {
+      "fusion_config": "content",
+      "k": 3,
+      "n": 59,
+      "output_sha256": "f176894f853543fcb56d5eeda25e2975df929ab4ef9037831fc2387ed118a5c9",
+      "prompt_tokens": {
+        "max": 1978.0,
+        "mean": 1627.322033898305,
+        "median": 1632.0,
+        "min": 1454.0,
+        "q1": 1537.5,
+        "q3": 1689.0,
+        "std": 104.71663793433228
+      },
+      "reused": 34,
+      "seconds": 284.61362209099934
+    },
+    "retrieval-equal-k1": {
+      "fusion_config": "equal",
+      "k": 1,
+      "n": 59,
+      "output_sha256": "8256a6051d496f2cf4c39ec77d4055ca01b3f2129ab33351e06c99bb6393ea25",
+      "prompt_tokens": {
+        "max": 924.0,
+        "mean": 735.9322033898305,
+        "median": 728.0,
+        "min": 635.0,
+        "q1": 693.0,
+        "q3": 760.5,
+        "std": 61.23582213128379
+      },
+      "reused": 0,
+      "seconds": 643.4662788539999
+    },
+    "retrieval-equal-k2": {
+      "fusion_config": "equal",
+      "k": 2,
+      "n": 59,
+      "output_sha256": "cc83a4dd19da1e1294c4e441c19e621f80547811654d38dd3ebff9523e87b5fc",
+      "prompt_tokens": {
+        "max": 1543.0,
+        "mean": 1179.864406779661,
+        "median": 1164.0,
+        "min": 1007.0,
+        "q1": 1119.5,
+        "q3": 1222.5,
+        "std": 88.48852412948354
+      },
+      "reused": 0,
+      "seconds": 664.1513185249996
+    },
+    "retrieval-equal-k3": {
+      "fusion_config": "equal",
+      "k": 3,
+      "n": 59,
+      "output_sha256": "9d5eff286fb003589251620e9da5da494c7c47a658d5e4a7502bf4b35a151e01",
+      "prompt_tokens": {
+        "max": 1978.0,
+        "mean": 1620.2033898305085,
+        "median": 1611.0,
+        "min": 1452.0,
+        "q1": 1540.0,
+        "q3": 1686.5,
+        "std": 103.63818739641354
+      },
+      "reused": 0,
+      "seconds": 700.2155825540003
+    },
+    "retrieval-k0": {
+      "fusion_config": null,
+      "k": 0,
+      "n": 59,
+      "output_sha256": "1e5db348c11a99f52d01fd8e8203f8a1db24187a6781e4748780459d95a1053f",
+      "prompt_tokens": {
+        "max": 430.0,
+        "mean": 278.45762711864404,
+        "median": 274.0,
+        "min": 213.0,
+        "q1": 256.0,
+        "q3": 286.5,
+        "std": 38.09591909898687
+      },
+      "reused": 0,
+      "seconds": 620.1269331419999
+    },
+    "retrieval-style-k1": {
+      "fusion_config": "style",
+      "k": 1,
+      "n": 59,
+      "output_sha256": "6d21a96d55c3e17deb6993e1908e0a5db2dbc188ab162155e9b9d674d9c8671d",
+      "prompt_tokens": {
+        "max": 871.0,
+        "mean": 715.2881355932203,
+        "median": 708.0,
+        "min": 623.0,
+        "q1": 685.0,
+        "q3": 742.0,
+        "std": 53.38604237300983
+      },
+      "reused": 24,
+      "seconds": 389.177522299
+    },
+    "retrieval-style-k2": {
+      "fusion_config": "style",
+      "k": 2,
+      "n": 59,
+      "output_sha256": "01286dbe4d0ba2867cea5021229c50de4f23667bbc142faadc01228eb6359f93",
+      "prompt_tokens": {
+        "max": 1435.0,
+        "mean": 1163.1016949152543,
+        "median": 1156.0,
+        "min": 1012.0,
+        "q1": 1115.5,
+        "q3": 1188.0,
+        "std": 78.4959666275171
+      },
+      "reused": 7,
+      "seconds": 675.9472157660002
+    },
+    "retrieval-style-k3": {
+      "fusion_config": "style",
+      "k": 3,
+      "n": 59,
+      "output_sha256": "3f529e95564abd8e833aa313ab155c12236ded75a60d8ca500f85a437246302e",
+      "prompt_tokens": {
+        "max": 1852.0,
+        "mean": 1612.7966101694915,
+        "median": 1600.0,
+        "min": 1422.0,
+        "q1": 1566.5,
+        "q3": 1655.0,
+        "std": 90.68099789007374
+      },
+      "reused": 0,
+      "seconds": 703.0637004719993
+    }
+  },
+  "k0_check": {
+    "baseline": "corpus/generations/lora-eval59.jsonl",
+    "n": 59,
+    "passed": true
+  },
+  "max_new_tokens": 768,
+  "max_seq_length": 4096,
+  "plan_sha256": "99a1f740141602bd0e186865c75b73bf63ee0de00c1a4ec66735d729b66465ec",
+  "seed": 42,
+  "timestamp": "2026-10-07T20:39:56Z"
+}

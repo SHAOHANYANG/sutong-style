@@ -4,6 +4,99 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-07 EDT T1.6：检索评估收尾（Phase 1 出口）
+
+数字取自分词修正后重算的 `eval/reports/retrieval-sweep.*` 与各 `retrieval-*.json`，不手算。主配置是预注册的 balanced、k = 2；其余 11 个带范例组合是**探索性的**，不替换 README 的 retrieval 行。`style_win_rate` 本轮不跑。
+
+### 主配置对照、13 组全表、三个目标值
+
+（与 `eval/reports/retrieval-sweep.md` 相同。）
+
+主配置是 balanced、k = 2，对照是同一次扫描的 k = 0。
+其余组合是探索性的，不替换 README 的 retrieval 行。style_win_rate 本轮不跑。
+
+| 指标 | 均值差（主 − 对照） | 95% 区间 | 结论 |
+|---|---|---|---|
+| profile_gap_per_case | -0.028729 | [-0.060864, 0.003425] | 未检出差异 |
+| hallucination_rate | -0.009887 | [-0.025424, 0.000000] | 未检出差异 |
+| entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| numeral_recall | 0.030508 | [-0.003390, 0.070056] | 未检出差异 |
+| copy_ratio | 0.032760 | [0.019210, 0.047696] | 只报告 |
+| style_distance | 0.007010 | [-0.052414, 0.066518] | 只报告 |
+| profile_gap | 0.010471 | — | 只报点估计 |
+
+| 组合 | 角色 | style_distance | profile_gap | profile_gap_per_case | entity_recall | numeral_recall | hallucination_rate | copy_ratio |
+|---|---|---|---|---|---|---|---|---|
+| retrieval-k0 | 对照 | 0.922513 | 0.203816 | 0.513992 | 1.000000 | 0.861017 | 0.014124 | 0.709247 |
+| retrieval-equal-k1 | 探索性 | 0.908714 | 0.205450 | 0.497898 | 1.000000 | 0.875141 | 0.004237 | 0.745687 |
+| retrieval-equal-k2 | 探索性 | 0.926546 | 0.204620 | 0.467228 | 1.000000 | 0.892090 | 0.004237 | 0.749246 |
+| retrieval-equal-k3 | 探索性 | 0.996126 | 0.189797 | 0.483773 | 1.000000 | 0.883616 | 0.004237 | 0.761473 |
+| retrieval-balanced-k1 | 探索性 | 0.919984 | 0.192274 | 0.508809 | 1.000000 | 0.886441 | 0.004237 | 0.731873 |
+| retrieval-balanced-k2 | 主配置 | 0.929522 | 0.214287 | 0.485262 | 1.000000 | 0.891525 | 0.004237 | 0.742007 |
+| retrieval-balanced-k3 | 探索性 | 0.918607 | 0.216889 | 0.470503 | 1.000000 | 0.863277 | 0.004237 | 0.753109 |
+| retrieval-content-k1 | 探索性 | 0.913444 | 0.217614 | 0.493708 | 1.000000 | 0.875141 | 0.004237 | 0.747112 |
+| retrieval-content-k2 | 探索性 | 0.922507 | 0.189182 | 0.455869 | 1.000000 | 0.892090 | 0.004237 | 0.753631 |
+| retrieval-content-k3 | 探索性 | 0.986370 | 0.187597 | 0.472459 | 1.000000 | 0.889266 | 0.004237 | 0.762296 |
+| retrieval-style-k1 | 探索性 | 0.911608 | 0.205993 | 0.498544 | 1.000000 | 0.886441 | 0.004237 | 0.729564 |
+| retrieval-style-k2 | 探索性 | 0.933805 | 0.183188 | 0.495522 | 1.000000 | 0.844350 | 0.004237 | 0.739132 |
+| retrieval-style-k3 | 探索性 | 0.940808 | 0.178332 | 0.501536 | 1.000000 | 0.889548 | 0.004237 | 0.746687 |
+
+| 目标 | 阈值 | 主配置 | 达到 |
+|---|---|---|---|
+| numeral_recall | >= 0.92 | 0.891525 | 未达到 |
+| hallucination_rate | <= 0.005 | 0.004237 | 达到 |
+| profile_gap | < 0.204 | 0.214287 | 未达到 |
+
+### prompt token 分布
+
+取自 `eval/reports/retrieval-sweep-manifest.json`。
+
+| 组合 | mean | std | median | q1 | q3 | min | max |
+|---|---|---|---|---|---|---|---|
+| retrieval-k0 | 278.5 | 38.1 | 274 | 256 | 286 | 213 | 430 |
+| retrieval-equal-k1 | 735.9 | 61.2 | 728 | 693 | 760 | 635 | 924 |
+| retrieval-equal-k2 | 1179.9 | 88.5 | 1164 | 1120 | 1222 | 1007 | 1543 |
+| retrieval-equal-k3 | 1620.2 | 103.6 | 1611 | 1540 | 1686 | 1452 | 1978 |
+| retrieval-balanced-k1 | 722.5 | 66.1 | 713 | 678 | 760 | 623 | 924 |
+| retrieval-balanced-k2 | 1170.2 | 81.0 | 1165 | 1100 | 1210 | 1007 | 1395 |
+| retrieval-balanced-k3 | 1618.0 | 97.6 | 1600 | 1555 | 1674 | 1451 | 1903 |
+| retrieval-content-k1 | 732.6 | 63.2 | 724 | 690 | 760 | 616 | 924 |
+| retrieval-content-k2 | 1183.8 | 88.3 | 1174 | 1118 | 1226 | 1060 | 1543 |
+| retrieval-content-k3 | 1627.3 | 104.7 | 1632 | 1538 | 1689 | 1454 | 1978 |
+| retrieval-style-k1 | 715.3 | 53.4 | 708 | 685 | 742 | 623 | 871 |
+| retrieval-style-k2 | 1163.1 | 78.5 | 1156 | 1116 | 1188 | 1012 | 1435 |
+| retrieval-style-k3 | 1612.8 | 90.7 | 1600 | 1566 | 1655 | 1422 | 1852 |
+
+### 探索性组合与事后挑选
+
+12 个带范例组合里，`profile_gap_per_case` 最低的是 **content，k = 2**（0.455869）。这是事后从 12 组里挑出来的，**没有**替换 README 的那一行；59 条上挑最好一定偏乐观。12 组的 `hallucination_rate` / `numeral_recall` / `copy_ratio` 等变化方向大体一致，但它们共用同一批 59 条样本和同一个 adapter，不是 12 次独立验证。
+
+### 12 组 hallucination_rate 相同的原因
+
+12 个带范例组合的 `hallucination_rate` 均为 **0.004237**。原因：59 条里只有 `我的帝王生涯_0130` 非零（该条为 0.25），其余 58 条为 0，故均值 = 0.25/59。该条在 12 组输出上虽不完全相同，但规则抽取到的幻觉实体都是同一个表面形式「钟爱」（1 个实体）。对照 k = 0 另有 `妇女生活_0050`、`罂粟之家_0094` 非零，故均值更高（0.014124）。
+
+### 副作用与欠项
+
+主配置相对对照：`exemplar_entity_leak` 两边均为 0；`exemplar_copy_ratio` 配对差区间含 0，未检出相对对照的范例抄写。`copy_ratio` 上升且区间不含 0，数值保真的变化可能部分来自改得更少。
+
+**T1.3 原定「预测向量 vs 直接用输入特征」的端到端生成对照：本次扫描未单独设该对照，未做，不用现有 13 组硬凑结论。** PLAN 要求的 `human_eval.jsonl` 检索召回评估：正文尚未写入，**未做**。
+
+### 分词修正更正（2026-10-07）
+
+`stylometry/features.py` 原先用全局 `jieba.lcut`。`ensure_manual_userdict` 往全局 jieba 加载 67 个人名后，后续文体特征会变。影响很小、结论不变，但评估不能取决于执行顺序。已改为模块私有 `Tokenizer()`、不加载用户词典（与已提交 `style_reference.json` / `lexicon.json` 的干净拟合口径一致；内存重拟合与已提交文件逐项相同）。
+
+三口径对比（主配置对 k = 0 的 `profile_gap_per_case`）：官方曾混用分词时差约 −0.0271；两组都用干净分词时 −0.028729，区间 [−0.060864, +0.003425]，均含 0。审计给出的污染口径下 balanced-k2 曾为 0.486845，干净为 0.485262。
+
+已提交报告中因此变化的数（旧 → 新）：
+
+| 文件 / 指标 | 旧 | 新 |
+|---|---|---|
+| `lora-eval59.json` `style_distance` | 0.9228076532274074 | 0.9225125975073157 |
+| `base-eval59.json` `style_distance` | 1.149013318260184 | 1.149451731933785 |
+| 各 `retrieval-*.json` 的 style 相关量 | 见 sweep 重算 | 干净分词下重写 |
+
+`profile_gap` / `profile_gap_per_case` 与三项保真、`copy_ratio` 在 base/lora 上不变。旧条目正文不改写；T0.5 基线表里的 LoRA `style_distance` 0.923 等显示精度仍可读，精确值见本更正与重算报告。
+
 ## 2026-10-07 EDT T2.4：TraceEvent 与每轮违规
 
 `TraceEvent` 落地：每节点记 `node / ts / duration_ms / payload`。时钟与单调计时器可注入。payload 只放 id、hash、长度和违规短片段，不含正文。`RoundRecord.violations` 补上该轮完整违规列表。本阶段无新的端到端评估数字。
@@ -28,7 +121,7 @@
 
 `scripts/sweep_topk.py` 按检索计划生成 13 组。解码和 `scripts/generate.py` 共用 `greedy_decode`。k = 0 先和 `corpus/generations/lora-eval59.jsonl` 逐条比对，有一条不同就停。`scripts/eval_sweep.py` 用 `--skip-judge` 的路径汇总，不读 `.env`。两个诊断量在 `eval/exemplar_diagnostics.py`。
 
-扫描还没有跑。没有生成文件，没有汇总数字，README 的 retrieval 行仍然空着。待人工在 WSL2 执行 `python -m scripts.sweep_topk --adapter adapters/sutong-v2/adapter`，再在 Windows 上执行 `uv run python -m scripts.eval_sweep`。
+扫描还没有跑。没有生成文件，没有汇总数字，README 的 retrieval 行仍然空着。待人工在 WSL2 执行 `python -m scripts.sweep_topk --adapter adapters/sutong-v2/adapter`，再在 Windows 上执行 `uv run python -m scripts.eval_sweep`。（2026-10-07 已跑完并写入 T1.6，见该日条目。）
 
 ## 2026-10-07 EDT T1.5 后半之一：检索计划与 token 计数器
 
@@ -70,6 +163,8 @@ dense 查询向量另写 `scripts/build_query_cache.py`，默认目录 `retrieva
 等权时，只在 style 路排第 1 的文档（1/61）排在两路内容检索都排第 30 的文档（2/90）后面。这是算术事实，权重怎么配留给 T1.5 预注册和 T1.6 实测。这次没有选推荐值，也没有把三路接成检索器。
 
 ## 2026-10-06 EDT T1.3 风格索引与预测向量消融
+
+（端到端「预测向量 vs 直接用输入特征」的生成对照原定留到 T1.6；T1.6 扫描未单独设该对照，结论仍止于本条的检索层消融。见 2026-10-07 T1.6。）
 
 预注册规则在看到结果之前单独提交（`116e486`）。判定只用 743 条训练对的 5 折，eval 59 条只作描述。度量是召回范例与查询原文的逐条剖面差，主分析 k = 3。
 
@@ -135,7 +230,7 @@ SPEC 4.1 写明索引池只能用 `split=train` 的 chunk，eval 原文不得进
 
 **loss 曲线。** train 1.36 → 0.78；eval 0.9808（epoch 1）→ 0.9881（epoch 2 回升）。与 v1 的 train 2.726 → 1.936、eval 2.169 → 2.056 → 2.089 **形状一致、绝对值不可比**（掩码方式不同 + 白话侧已全部重新生成）。v2 的 eval 在 epoch 1 即触底，早于 v1 的 1.9；仅记录，不据此改 epoch 数。
 
-**基线数字（59 条 eval，贪心解码，seed 42）。** 下列 `profile_gap` 与分维数字的口径见 2026-10-06「profile_gap 口径更正」，本段正文保留原样。
+**基线数字（59 条 eval，贪心解码，seed 42）。** 下列 `profile_gap` 与分维数字的口径见 2026-10-06「profile_gap 口径更正」，本段正文保留原样。`style_distance` 的第四位小数在 2026-10-07 分词隔离修正后有微调，见同日 T1.6 更正；显示到千分位的表值不变。
 
 | | style_distance | profile_gap | entity_recall | numeral_recall | hallucination_rate | copy_ratio |
 |---|---|---|---|---|---|---|

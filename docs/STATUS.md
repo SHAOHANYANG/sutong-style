@@ -1,4 +1,4 @@
-# 项目现状（截至 2026-10-05，Phase 0 完成）
+# 项目现状（截至 2026-10-07，Phase 0–1 完成）
 
 这份文档回答三个问题：**做到哪了、试过什么、下一步干什么**。
 新接手的实现者或审计者先读这份，再读 `AGENTS.md` / `SPEC.md` / `PLAN.md`。
@@ -17,7 +17,7 @@
 
 ## 2. 做到哪了
 
-Phase 0 全部完成，出口条件（README 指标表前两行填真数字）已满足。
+Phase 0 全部完成。Phase 1（检索）全部完成，出口条件（README 指标表追加 retrieval 行）已满足；主配置相对 k = 0 **未检出差异**（SPEC §4.7）。`human_eval.jsonl` 正文尚未写入，PLAN T1.6 要求的检索召回评估仍欠。Phase 2 图骨架与修订 prompt / TraceEvent 已落地，T2.5 GPU 评估未跑。
 
 ### 提交历史
 
@@ -211,9 +211,9 @@ v2 的 eval 在 epoch 1 就触底，比 v1 的 1.9 还早。**仅记录，不据
 
 ---
 
-## 9. 下一步：Phase 1 — 检索（RAG）
+## 9. Phase 1 — 检索（RAG）（已完成）
 
-出口：README 表格多一行 `retrieval`。
+出口已满足：README 表格多一行 `retrieval`（balanced，k = 2）。判定与数字见 CHANGELOG T1.6 与 `eval/reports/retrieval-sweep.md`。
 
 ### 9.1 为什么不能用普通 RAG
 
@@ -244,24 +244,23 @@ v2 的 eval 在 epoch 1 就触底，比 v1 的 1.9 还早。**仅记录，不据
 | **T1.3** `[CPU]` | `retrieval/style_index.py`（numpy 暴力最近邻，**不要上向量库**，915×20 暴力算是微秒级）、`retrieval/style_predictor.py`（Ridge）、`scripts/ablate_style_predictor.py` | 消融脚本输出两组端到端风格分：预测向量 vs 直接用输入特征。**如果预测版没有优势，删掉 `style_predictor.py`**，CHANGELOG 记负结果。这是明确授权的删除 |
 | **T1.4** `[CPU]` | `retrieval/fusion.py` | RRF 公式单测（构造已知 rank 列表断言融合顺序）；三路任一为空时不崩 |
 | **T1.5** `[CPU]` | `retrieval/prompt.py`、`scripts/sweep_topk.py`（k ∈ {0,1,2,3}） | prompt 构造有单测（断言范例数量、顺序、token 预估）；**必须统计并记录 prompt token 数**——3 条范例轻松超 1500 token，会同时降质降速 |
-| **T1.6** `[GPU]` | README 追加 `retrieval` 行 | CHANGELOG 记录最优 k 与指标变化 |
+| **T1.6** `[GPU]` | README 追加 `retrieval` 行 | ✅ 主配置填表；CHANGELOG 含 13 组与 token 分布。`human_eval` 召回评估欠 |
 
-### 9.5 Phase 1 该盯的指标
+### 9.5 Phase 1 该盯的指标（主配置实测）
 
-Phase 0 的靶子已经量化了，Phase 1 要看的是：
+| 目标 | 阈值 | 主配置 | 结果 |
+|---|---|---|---|
+| `numeral_recall` | ≥ 0.92 | 0.891525 | 未达到 |
+| `hallucination_rate` | ≤ 0.005 | 0.004237 | 达到 |
+| `profile_gap` | < 0.204 | 0.214287 | 未达到 |
 
-- 集合级 `profile_gap` 能不能从 **0.204** 继续往下走（逐条当前是 0.514，不要和集合级混着看）
-- `numeral_recall` 能不能从 **0.861** 拉回 **0.92** 以上
-- `hallucination_rate` 能不能从 **0.0141** 压回 **0.005** 以下
-- `copy_ratio` 不能因为给了范例就飙升（范例会诱导抄范例）
-
-**建议从 T1.1 开始**：纯 CPU、不依赖 GPU、不花钱、验收条件机械可判。
+相对 k = 0：`profile_gap_per_case` / `numeral_recall` / `hallucination_rate` 均值差方向朝好，但区间均含 0 → 未检出差异。`copy_ratio` 上升且区间不含 0。`exemplar_entity_leak` = 0；未检出相对对照的范例抄写。
 
 ---
 
-## 10. 再下一步：Phase 2 — Agent 自检重写环
+## 10. 下一步：Phase 2 — Agent 自检重写环
 
-出口：README 多一行 `agent`，且 `hallucination_rate` 明显下降。
+出口：README 多一行 `agent`，且 `hallucination_rate` 明显下降。T2.1–T2.4 已完成；下一步是 T2.5 GPU 评估。
 
 ```
 白话输入 → [检索范例] → [LoRA 生成] → [保真校验 + 风格打分] → [定向修订，最多 3 轮] → 输出 + trace
