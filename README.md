@@ -126,6 +126,21 @@ eval 白话的查询向量单独缓存，不和上面的原文索引写进同一
 
 输出在 `retrieval/data/query_cache/`，已进 `.gitignore`。同样不要重装 torch / transformers。
 
+### k 扫描
+
+检索计划已经写好。生成在 WSL2 上跑，评估回到 Windows。README 的 retrieval 行等这次扫描的主配置数字出来再填，现在还是空的。
+
+```bash
+~/venvs/sutong/bin/python -m scripts.sweep_topk --dry-run
+~/venvs/sutong/bin/python -m scripts.sweep_topk --adapter adapters/sutong-v2/adapter
+```
+
+```bash
+uv run python -m scripts.eval_sweep
+```
+
+扫描先写 k = 0，并和 `corpus/generations/lora-eval59.jsonl` 逐条比对。有一条不同就停，不跑其余 12 组。生成文件在 `corpus/generations/`，不提交。清单在 `eval/reports/retrieval-sweep-manifest.json`。
+
 ## Quickstart
 
 <!-- TODO(T3.4) -->

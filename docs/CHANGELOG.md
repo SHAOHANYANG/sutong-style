@@ -4,6 +4,14 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-07 EDT T1.5 后半之二：k 扫描脚本与判定规则
+
+判定规则在看到扫描结果之前单独提交（`b10d57e`），写在 SPEC §4.7。§4.6 没有改。主配置仍是 balanced、k = 2，对照是同一次扫描的 k = 0。
+
+`scripts/sweep_topk.py` 按检索计划生成 13 组。解码和 `scripts/generate.py` 共用 `greedy_decode`。k = 0 先和 `corpus/generations/lora-eval59.jsonl` 逐条比对，有一条不同就停。`scripts/eval_sweep.py` 用 `--skip-judge` 的路径汇总，不读 `.env`。两个诊断量在 `eval/exemplar_diagnostics.py`。
+
+扫描还没有跑。没有生成文件，没有汇总数字，README 的 retrieval 行仍然空着。待人工在 WSL2 执行 `python -m scripts.sweep_topk --adapter adapters/sutong-v2/adapter`，再在 Windows 上执行 `uv run python -m scripts.eval_sweep`。
+
 ## 2026-10-07 EDT T1.5 后半之一：检索计划与 token 计数器
 
 `QwenPromptTokenizer` 不再自己加载分词器，也不再导入 transformers。计数改成与 `generate_one` 同一条渲染路径：先 `apply_chat_template(..., tokenize=False, add_generation_prompt=True)` 得到字符串，再 `tokenizer(prompt, add_special_tokens=False)` 取 `input_ids` 长度。调用方以后把 `generate.py` 已经加载的那个分词器传进来。

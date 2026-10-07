@@ -50,17 +50,17 @@ def model_name(adapter: Path | None) -> str:
     return adapter.parent.name if adapter is not None else "base"
 
 
-def generate_one(
+def greedy_decode(
     model: Any,
     tokenizer: Any,
-    vernacular: str,
+    messages: list[dict[str, str]],
     max_new_tokens: int,
 ) -> str:
-    """Greedy decode. The prompt comes from scripts.train.build_messages."""
+    """Greedy decode of one chat. sweep_topk.py must call this, not a copy."""
     import torch
 
     prompt = tokenizer.apply_chat_template(
-        build_messages(vernacular, None),
+        messages,
         tokenize=False,
         add_generation_prompt=True,
     )
@@ -77,6 +77,32 @@ def generate_one(
         )
     generated = output[0][inputs["input_ids"].shape[1] :]
     return str(tokenizer.decode(generated, skip_special_tokens=True)).strip()
+
+
+def generate_one(
+    model: Any,
+    tokenizer: Any,
+    vernacular: str,
+    max_new_tokens: int,
+) -> str:
+    """Greedy decode. The prompt comes from scripts.train.build_messages."""
+    return greedy_decode(model, tokenizer, build_messages(vernacular, None), max_new_tokens)
+
+
+def load_inference_model(adapter: Path | None, max_seq_length: int, seed: int) -> tuple[Any, Any]:
+    """Load the base or a LoRA adapter once. Imports stay inside the call."""
+    import torch
+    from unsloth import FastLanguageModel
+
+    torch.manual_seed(seed)
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=str(adapter) if adapter is not None else BASE_MODEL,
+        max_seq_length=max_seq_length,
+        dtype=None,
+        load_in_4bit=True,
+    )
+    FastLanguageModel.for_inference(model)
+    return model, tokenizer
 
 
 def write_rows(path: Path, rows: list[dict[str, object]]) -> None:
@@ -110,17 +136,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         decoding="greedy",
     )
 
-    import torch
-    from unsloth import FastLanguageModel
-
-    torch.manual_seed(args.seed)
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=str(args.adapter) if args.adapter else BASE_MODEL,
-        max_seq_length=args.max_seq_length,
-        dtype=None,
-        load_in_4bit=True,
-    )
-    FastLanguageModel.for_inference(model)
+    model, tokenizer = load_inference_model(args.adapter, args.max_seq_length, args.seed)
 
     rows: list[dict[str, object]] = []
     for index, case in enumerate(cases, start=1):

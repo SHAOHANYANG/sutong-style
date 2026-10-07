@@ -1,5 +1,30 @@
 # QUESTIONS
 
+## Q26 — 扫描文件名、诊断量方向与自助法插值（2026-10-07，按假设实现）
+
+**问题**
+k = 0 没有融合配置，生成行的 `fusion_config` 写什么、十三组文件叫什么，预注册没有写。
+`prompt_sha256` 哈希的是渲染后的字符串还是消息列表，也没有写。
+范例列表为空时两个诊断量取什么值，没有写。诊断量要给区间，但没有写「好」的方向，因此没有写要不要下「改善 / 恶化」。
+自助法的 95% 百分位区间用哪种插值、端点正好是 0 算不算含 0，没有写。
+STATUS §9.5 的三个目标是只对主配置报告，还是十三组都报告，没有写。`profile_gap`「低于 0.204」是严格小于还是小于等于，预注册写了「低于」，和另外两个符号不完全同一类。
+k = 0 那一组自己的诊断分布，是对着空范例算（那样会恒为 0），还是对着主配置的 2 条范例算，没有写。汇总时范例正文从计划再查一遍，还是从生成行里的 `exemplar_ids` 回 pairs 查，没有写。
+续跑除了重算 `prompt_sha256`，要不要把 token 再数一遍，没有写。
+
+**假设**
+k = 0 的 `fusion_config` 为 null。文件名是 `retrieval-k0.jsonl`，其余是 `retrieval-{配置}-k{k}.jsonl`。
+`prompt_sha256` 是消息列表紧凑 JSON（`ensure_ascii=False`）的 sha256 十六进制，不带 `sha256:` 前缀。`exemplar_ids` 按 prompt 里出现的顺序，也就是融合排名从后往前，rank 1 在列表末尾。
+范例为空时 `exemplar_copy_ratio` 为 0。`exemplar_entity_leak` 的范例实体集为空，比例为 0；输出没有实体时也是 0。
+诊断量报告均值差和区间，不写「改善 / 恶化」。预注册没有给方向。
+自助法用 `numpy.quantile` 的线性插值，分位点 0.025 和 0.975。区间端点等于 0 视为含 0，结论是「未检出差异」。
+三个目标只对主配置判定达到与否。`numeral_recall` ≥ 0.92，`hallucination_rate` ≤ 0.005，`profile_gap` 严格小于 0.204。
+k = 0 的诊断分布对着主配置 balanced、k = 2 的那 2 条范例算。范例正文用生成行里的 `exemplar_ids` 回 `pairs.jsonl` 取，汇总不再读计划文件。
+续跑只重算 `prompt_sha256`。token 数跟着已经写下的行走，不重数。同一 prompt 若已经有两份不同输出，报错退出。
+manifest 和汇总里的 commit 若出现，是生成时的 `git rev-parse HEAD`，不能指向包含该文件的那次提交。这次实现还没有跑扫描，所以还没有 manifest。
+
+**影响范围**
+`scripts/sweep_topk.py`、`scripts/eval_sweep.py`、`eval/exemplar_diagnostics.py`。§4.7 的判定规则不改。
+
 ## Q25 — 检索计划的统计口径、作品名与计数路径（2026-10-07，按假设实现）
 
 **问题**

@@ -143,6 +143,8 @@ r=32   59,867,136
 
 `pipeline` 取值 `baseline` / `retrieval` / `agent`。取 `agent` 时 `trace` 必填，结构见 4.4。
 
+`pipeline` 为 `retrieval` 时，同一行再带五个字段：`fusion_config`（k = 0 时为 null）、`k`、`exemplar_ids`（按 prompt 中出现的顺序）、`prompt_tokens`、`prompt_sha256`。`eval/run_eval.py` 读取时忽略这些未知字段，已有的 baseline 文件不用补列。
+
 ### 1.5 语料重建：`scripts/vernacularize.py` 规格
 
 这是整个重建的质量瓶颈——训练数据的上限就在这一步。
