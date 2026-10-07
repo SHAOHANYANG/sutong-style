@@ -217,6 +217,47 @@ def _shang_is_approximate(number: str) -> bool:
     return bool(core) and core[0] in SHANG_MAGNITUDE
 
 
+def numeral_key_surfaces(text: str) -> dict[str, str]:
+    """Map each numeral_keys entry to the first surface span in `text`.
+
+    Spans come from the original string (full-width digits kept). Keys match
+    extract_quantities / numeral_keys exactly; extraction rules are unchanged.
+    """
+    surfaces: dict[str, str] = {}
+    masked = text.translate(WIDTH_TRANSLATION)
+    for title, rank in TITLE_ORDINALS:
+        if title in masked:
+            key = f"第{rank}"
+            surfaces.setdefault(key, title)
+            masked = masked.replace(title, " " * len(title))
+    for match in QUANTITY.finditer(masked):
+        prefix = match.group("prefix")
+        marker = match.group("marker")
+        number = match.group("number")
+        unit = match.group("unit") or ""
+        if not unit and len(number) > 1 and number.endswith("两"):
+            number, unit = number[:-1], "两"
+        if prefix == "上" and marker is None and not _shang_is_approximate(number):
+            continue
+        if not unit and marker is None and prefix is None:
+            continue
+        if prefix is None and marker is None and number == "一" and unit in GRAMMATICAL_UNITS:
+            continue
+        surface = text[match.start() : match.end()]
+        try:
+            normalized = _normalize_number(number)
+        except ValueError:
+            surfaces.setdefault(match.group(0), surface)
+            continue
+        if marker == "第":
+            surfaces.setdefault(f"第{normalized}", surface)
+            continue
+        label = APPROXIMATE_LABEL.get(prefix or "", "")
+        key = f"{label}:{normalized}" if label else normalized
+        surfaces.setdefault(key, surface)
+    return surfaces
+
+
 def extract_quantities(text: str) -> QuantityProfile:
     """Extract values, not spellings. Titles and 第N stay out of the cardinal set."""
     masked = text.translate(WIDTH_TRANSLATION)

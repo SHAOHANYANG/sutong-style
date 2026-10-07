@@ -9,6 +9,7 @@ from typing import Any, cast
 from langgraph.errors import GraphRecursionError
 from langgraph.graph import END, START, StateGraph
 
+from agent.config import AgentConfig
 from agent.nodes import (
     Generator,
     MessageBuilder,
@@ -70,11 +71,13 @@ def _classify_termination(state: AgentState) -> tuple[TerminationReason, Fallbac
     if halt_kind is not None:
         return "fallback", halt_kind
     iterations = int(state.get("iter") or 0)
+    limit = int(state.get("max_generations") or MAX_GENERATIONS)
     violations = state.get("last_violations") or []
     score = state.get("last_score")
-    threshold = float(state["score_threshold"])
-    unfinished = bool(violations) or (score is not None and score < threshold)
-    if iterations >= MAX_GENERATIONS and unfinished:
+    threshold = state.get("score_threshold")
+    score_unfinished = threshold is not None and score is not None and score < float(threshold)
+    unfinished = bool(violations) or score_unfinished
+    if iterations >= limit and unfinished:
         return "max_rounds", None
     return "accepted", None
 
@@ -229,11 +232,15 @@ def run_agent(
     generator: Generator,
     verifier: Verifier,
     scorer: Scorer,
-    score_threshold: float,
+    config: AgentConfig | None = None,
+    score_threshold: float | None = None,
     message_builder: MessageBuilder | None = None,
     route_fn: RouteFn | None = None,
 ) -> AgentResult:
     """Run the loop. Recursion-limit and generator failures still return a labeled result."""
+    settings = (
+        config if config is not None else AgentConfig(re_retrieve_score_threshold=score_threshold)
+    )
     compiled, box = build_graph(
         retriever=retriever,
         generator=generator,
@@ -251,7 +258,8 @@ def run_agent(
         "last_violations": [],
         "iter": 0,
         "re_retrieved": False,
-        "score_threshold": score_threshold,
+        "max_generations": settings.max_generations,
+        "score_threshold": settings.re_retrieve_score_threshold,
         "trace": [],
         "halt": False,
     }

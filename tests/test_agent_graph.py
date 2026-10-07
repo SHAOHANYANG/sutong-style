@@ -44,7 +44,7 @@ def _run(
     always_violations: list[Violation] | None = None,
     scores: list[float] | None = None,
     always_score: float | None = None,
-    score_threshold: float = 0.5,
+    score_threshold: float | None = None,
     batches: list[list[Exemplar]] | None = None,
     errors_on: list[int] | None = None,
     route_fn: RouteFn | None = None,
@@ -69,7 +69,7 @@ def _run(
 
 
 def test_one_shot_accept() -> None:
-    result, generator, _ = _run(outputs=["好的一版"], scores=[0.9], score_threshold=0.5)
+    result, generator, _ = _run(outputs=["好的一版"], scores=[0.9])
     assert len(generator.calls) == 1
     assert result.termination == "accepted"
     assert result.fallback_kind is None
@@ -297,12 +297,26 @@ def test_recursion_limit_constant_matches_formula() -> None:
 def test_default_route_accepts_at_cap_with_violations() -> None:
     state: AgentState = {
         "iter": MAX_GENERATIONS,
+        "max_generations": MAX_GENERATIONS,
         "last_violations": [VIOLATION],
         "last_score": 0.9,
         "score_threshold": 0.5,
         "re_retrieved": False,
     }
     assert default_route(state) == "accept"
+
+
+def test_null_threshold_skips_re_retrieve() -> None:
+    result, generator, retriever = _run(
+        outputs=["低分"],
+        violations=[[]],
+        scores=[0.1],
+        score_threshold=None,
+    )
+    assert len(generator.calls) == 1
+    assert len(retriever.calls) == 1
+    assert result.termination == "accepted"
+    assert result.re_retrieved is False
 
 
 def test_build_result_preserves_trace_entries() -> None:
@@ -314,7 +328,8 @@ def test_build_result_preserves_trace_entries() -> None:
         "last_violations": [],
         "last_score": 0.7,
         "iter": 1,
-        "score_threshold": 0.5,
+        "max_generations": MAX_GENERATIONS,
+        "score_threshold": None,
         "re_retrieved": False,
         "trace": [TraceEntry(node="retrieve", round=0)],
     }

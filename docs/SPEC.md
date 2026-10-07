@@ -746,14 +746,29 @@ route ─┬─ "accept"      → END
        └─ "re_retrieve" → retrieve      （分数过低时换范例）
 ```
 
-路由规则（`iter` = 生成器被调用的次数，上限 3；换范例只允许一次）：
+路由规则（`iter` = 生成器被调用的次数，上限取自 `agent/config.py`，默认 3；换范例只允许一次）：
 
-- 当前这一版是空白（空串或只有空白字符）且 `iter < 3` → `revise`（空白不送校验/打分，但仍占一轮；轮数用尽才走兜底）
-- 保真有违规 且 `iter < 3` → `revise`
-- 保真通过 但分数**低于**阈值 且 `iter < 3` 且 还没换过范例 → `re_retrieve`
+- 当前这一版是空白（空串或只有空白字符）且 `iter < 上限` → `revise`（空白不送校验/打分，但仍占一轮；轮数用尽才走兜底）
+- 保真有违规 且 `iter < 上限` → `revise`
+- 保真通过 但**配置了**换范例分数阈值、分数低于该阈值、`iter < 上限`、且还没换过范例 → `re_retrieve`
 - 否则 → `accept`
 
-分数由注入的打分器给出，约定**越大越好**。不要把这里写成「`style_distance` 高于阈值」——§3.1 已更正 `style_distance` 的目标是趋近 1.0，不是越低越好；真实打分定义在 T2.2，骨架不对它做假设。阈值作为构造参数传入，不硬编码在路由里。
+`verify` 的违规从 `eval/fidelity.assess` 与三项保真指标同一份抽取导出，kind 为 `entity_missing` / `numeral_missing` / `entity_hallucination` / `title`。缺失类的 `expected`、新增类的 `actual` 必须是对应文本里的表面片段，不是归一化键。「违规列表为空」等价于 `entity_recall = 1`、`numeral_recall = 1`、`hallucination_rate = 0` 且无称谓违规。
+
+分数由注入的打分器给出，约定**越大越好**。实现是候选 B：输出 z 向量与 `StylePredictor(输入白话 z)` 之间平均绝对差的相反数。它**只用于**挑选规则的第二级（违规条数相同时破平局），**不驱动路由**。`agent/config.py` 里 `re_retrieve_score_threshold` 默认为 `null`，换范例分支默认关闭。
+
+**在线风格分的已知局限（2026-10-07，数字见 `eval/reports/agent-scorer-validation.json`）。** 在 59 条 eval 上对照真实的 `profile_gap_per_case`（输出相对该条自己原文）：
+
+| | 白话输入 | base | LoRA | 苏童原文 |
+|---|---|---|---|---|
+| 真实 `profile_gap_per_case` 均值 | 0.623 | 0.748 | 0.514 | 0 |
+| 候选 B 均值 | 0.481 | 0.613 | 0.505 | 0.543 |
+| 候选 B 与真实值 Spearman | 0.454 | 0.469 | 0.412 | — |
+| 候选 A（`|style_distance − 1|`）与真实值 Spearman | -0.005 | 0.203 | -0.013 | — |
+
+同一条输入的三个版本（白话 / base / LoRA）里挑真实差距最小的那个：候选 B 挑对 57.6%，候选 A 挑对 23.7%，随机 33.3%。结论：（1）候选 A 无信息量，不用；（2）候选 B 有中等排序能力，但它给「原样不改的白话」打的分（0.481）比 LoRA（0.505）和原文（0.543）都好，会把决策推向照抄输入。因此 Phase 2 的环只对保真负责，没有可信的在线风格分可驱动路由。
+
+另：§1.5.3 已定案的数值闸门偏严（「一 + 量词」、序数）会表现为假阳性 `numeral_missing`，agent 可能白跑几轮；不在本阶段改抽取。
 
 **终止规则**：
 

@@ -4,6 +4,10 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-07 EDT T2.2：保真校验接入，换范例默认关闭
+
+`Violation` 增加 `entity_missing` / `numeral_missing` / `entity_hallucination`，与三项保真指标共用同一份抽取；表面片段留给 T2.3。打分器用 StylePredictor 目标的负 MAE，只破平局。审计表在 `eval/reports/agent-scorer-validation.json`：候选 A 无信息量；候选 B 会偏向照抄白话，故 `re_retrieve_score_threshold` 默认 null。三项指标相对 base/lora 基线报告无变化。
+
 ## 2026-10-07 EDT T2.1：Agent 自检重写环图骨架
 
 搭了 `agent/`：`retrieve → generate → verify → score → route`，四个外部能力全部 Protocol 注入，测试只用 Fake。生成上限 `MAX_GENERATIONS = 3`，`RECURSION_LIMIT = 20`（最长合法路径 14 步 + 余量 6）。结束挑选按违规条数 → 分数 → 轮次字典序，不再用 argmax(scores)；SPEC §4.4 已改，理由写在那里。

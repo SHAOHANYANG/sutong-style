@@ -77,7 +77,8 @@ class AgentState(TypedDict, total=False):
     last_score: float
     iter: int
     re_retrieved: bool
-    score_threshold: float
+    max_generations: int
+    score_threshold: float | None
     trace: list[TraceEntry]
     halt: bool
     halt_kind: FallbackKind

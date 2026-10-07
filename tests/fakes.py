@@ -213,18 +213,30 @@ class FakeAgentScorer:
         values: Sequence[float] | None = None,
         *,
         always: float | None = None,
-        fn: Callable[[str], float] | None = None,
+        fn: Callable[[str, str], float] | None = None,
     ) -> None:
         self.values = list(values) if values is not None else [1.0]
         self.always = always
         self.fn = fn
-        self.calls: list[str] = []
+        self.calls: list[tuple[str, str]] = []
 
-    def score(self, output: str) -> float:
-        self.calls.append(output)
+    def score(self, vernacular: str, output: str) -> float:
+        self.calls.append((vernacular, output))
         if self.fn is not None:
-            return float(self.fn(output))
+            return float(self.fn(vernacular, output))
         if self.always is not None:
             return float(self.always)
         index = min(len(self.calls) - 1, len(self.values) - 1)
         return float(self.values[index])
+
+
+class FakeStylePredictor:
+    """Returns a fixed target vector. Used to unit-test PredictorScorer offline."""
+
+    def __init__(self, target: np.ndarray) -> None:
+        self.target = np.asarray(target, dtype=np.float64)
+        self.calls: list[np.ndarray] = []
+
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        self.calls.append(np.asarray(x, dtype=np.float64))
+        return self.target.copy()

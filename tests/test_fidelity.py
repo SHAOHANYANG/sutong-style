@@ -23,6 +23,10 @@ def test_changed_magnitude_lowers_numeral_recall() -> None:
     assert report.numeral_recall < 1.0
     assert extract_facts("万人大军", set(), EmptyTagger()).numerals == {"10000"}
     assert "10000" not in extract_facts("十万铁骑", set(), EmptyTagger()).numerals
+    assert any(item.kind == "numeral_missing" for item in report.violations)
+    missing = next(item for item in report.violations if item.kind == "numeral_missing")
+    assert missing.expected is not None
+    assert missing.expected in "万人大军"
 
 
 def test_swapped_title_is_a_violation() -> None:

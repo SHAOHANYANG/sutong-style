@@ -39,9 +39,9 @@ class Verifier(Protocol):
 
 
 class Scorer(Protocol):
-    """Style (or other) score. Higher is better by convention."""
+    """Style (or other) score. Higher is better. Sees the vernacular input."""
 
-    def score(self, output: str) -> float: ...
+    def score(self, vernacular: str, output: str) -> float: ...
 
 
 MessageBuilder = Callable[[AgentState], list[dict[str, str]]]
@@ -58,19 +58,21 @@ def default_route(state: AgentState) -> RouteDecision:
     if state.get("halt"):
         return "accept"
     iterations = int(state.get("iter") or 0)
+    limit = int(state.get("max_generations") or MAX_GENERATIONS)
     candidates = state.get("candidates") or []
-    if candidates and not candidates[-1].strip() and iterations < MAX_GENERATIONS:
+    if candidates and not candidates[-1].strip() and iterations < limit:
         return "revise"
     violations = state.get("last_violations") or []
-    if violations and iterations < MAX_GENERATIONS:
+    if violations and iterations < limit:
         return "revise"
     score = state.get("last_score")
-    threshold = float(state["score_threshold"])
+    threshold = state.get("score_threshold")
     if (
         not violations
         and score is not None
-        and score < threshold
-        and iterations < MAX_GENERATIONS
+        and threshold is not None
+        and score < float(threshold)
+        and iterations < limit
         and not state.get("re_retrieved", False)
     ):
         return "re_retrieve"
@@ -171,7 +173,7 @@ def make_score(scorer: Scorer) -> Callable[[AgentState], AgentState]:
                 "scores": [*list(state.get("scores") or []), 0.0],
                 "trace": trace,
             }
-        value = float(scorer.score(candidates[-1]))
+        value = float(scorer.score(state["input"], candidates[-1]))
         return {
             "last_score": value,
             "scores": [*list(state.get("scores") or []), value],

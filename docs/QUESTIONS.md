@@ -1,5 +1,21 @@
 # QUESTIONS
 
+## Q28 — 违规 kind 命名、打分器装配与验证报告字段（2026-10-07，按假设实现）
+
+**问题**
+四类违规的 `kind` 字符串、幻觉类有没有 `expected`、数值缺失的表面片段取第几次出现，预注册没有写。
+`Scorer.score` 要同时收输入和输出之后，旧的 Fake 签名怎么改，没有写。
+`run_agent` 是继续收 `score_threshold` 还是只收 `AgentConfig`，没有写。
+验证报告里分布字段用 `summarize` 的哪些键、Spearman 遇常数列怎么办，没有写。
+
+**假设**
+kind 为 `entity_missing` / `numeral_missing` / `entity_hallucination` / `title`。幻觉类 `expected` 为 null，`actual` 为输出里的实体表面形式。数值表面取 `numeral_key_surfaces` 里该键第一次出现的原文切片（与全角位置对齐）。
+`FakeAgentScorer.score(vernacular, output)`。`run_agent` 收 `config: AgentConfig | None`，并保留 `score_threshold=` 作为未传 config 时的简写。
+验证报告用 `summarize` 的 mean/std/median/q1/q3/min/max；Spearman 在任一侧方差为 0 时记 0.0。报告不含正文。
+
+**影响范围**
+`eval/fidelity.py`、`agent/{config,verifier,scorer,nodes,graph}.py`、`scripts/validate_agent_scorer.py`。§4.6/§4.7 不改。
+
 ## Q27 — Agent 骨架的终止字段、recursion_limit 与状态形状（2026-10-07，按假设实现）
 
 **问题**

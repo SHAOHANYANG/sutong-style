@@ -14,7 +14,7 @@ import jieba.posseg as pseg
 from pydantic import BaseModel, Field
 
 from eval.metrics import entity_recall, hallucination_rate, numeral_recall
-from scripts.vernacularize import PROPER_NOUN_FLAGS, extract_quantities
+from scripts.vernacularize import PROPER_NOUN_FLAGS, extract_quantities, numeral_key_surfaces
 
 MANUAL_ENTITY_PATH = Path(__file__).resolve().parents[1] / "corpus" / "manual_entities.json"
 # jieba tags 登基 as nrt and 入宫 as ns, so a verb flag never fires. These are the
@@ -149,16 +149,24 @@ class Facts(BaseModel):
     titles: set[str] = Field(default_factory=set)
 
 
-class Violation(BaseModel):
-    """One concrete fidelity miss. Title replacements name both sides."""
+ViolationKind = Literal[
+    "entity_missing",
+    "numeral_missing",
+    "entity_hallucination",
+    "title",
+]
 
-    kind: Literal["title"]
-    expected: str
+
+class Violation(BaseModel):
+    """One concrete fidelity miss. Surfaces are spans from the source texts."""
+
+    kind: ViolationKind
+    expected: str | None = None
     actual: str | None = None
 
 
 class FidelityReport(BaseModel):
-    """Three SPEC rates plus title violations."""
+    """Three SPEC rates plus the full violation list derived from the same facts."""
 
     entity_recall: float
     numeral_recall: float
@@ -268,6 +276,32 @@ def title_violations(source: set[str], output: set[str]) -> list[Violation]:
     ]
 
 
+def fidelity_violations(
+    source: str,
+    output: str,
+    source_facts: Facts,
+    output_facts: Facts,
+) -> list[Violation]:
+    """Export concrete misses from the same fact sets that feed the three rates.
+
+    Empty violations means entity_recall = 1, numeral_recall = 1, hallucination_rate = 0,
+    and no title replacements. Surfaces are substrings of the corresponding text.
+    """
+    violations: list[Violation] = []
+    for name in sorted(source_facts.entities - output_facts.entities):
+        violations.append(Violation(kind="entity_missing", expected=name, actual=None))
+    surfaces = numeral_key_surfaces(source)
+    for key in sorted(source_facts.numerals - output_facts.numerals):
+        expected = surfaces.get(key)
+        if expected is None:
+            raise RuntimeError(f"数值键 {key!r} 在输入中没有对应表面形式")
+        violations.append(Violation(kind="numeral_missing", expected=expected, actual=None))
+    for name in sorted(output_facts.entities - source_facts.entities):
+        violations.append(Violation(kind="entity_hallucination", expected=None, actual=name))
+    violations.extend(title_violations(source_facts.titles, output_facts.titles))
+    return violations
+
+
 def assess(
     source: str,
     output: str,
@@ -282,7 +316,7 @@ def assess(
         entity_recall=entity_recall(source_facts.entities, output_facts.entities),
         numeral_recall=numeral_recall(source_facts.numerals, output_facts.numerals),
         hallucination_rate=hallucination_rate(source_facts.entities, output_facts.entities),
-        violations=title_violations(source_facts.titles, output_facts.titles),
+        violations=fidelity_violations(source, output, source_facts, output_facts),
     )
 
 
