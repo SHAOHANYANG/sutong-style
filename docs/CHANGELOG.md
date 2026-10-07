@@ -4,6 +4,31 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-07 EDT T1.5 后半之一：检索计划与 token 计数器
+
+`QwenPromptTokenizer` 不再自己加载分词器，也不再导入 transformers。计数改成与 `generate_one` 同一条渲染路径：先 `apply_chat_template(..., tokenize=False, add_generation_prompt=True)` 得到字符串，再 `tokenizer(prompt, add_special_tokens=False)` 取 `input_ids` 长度。调用方以后把 `generate.py` 已经加载的那个分词器传进来。
+
+`scripts/build_retrieval_plan.py` 在 CPU 上为 59 条 eval 查询、四种预注册配置各写出融合排名前 3 的范例，报告在 `eval/reports/retrieval-plan.json`。索引池是 `train_documents` 选出的 743 条。depth 20、rrf_k 60、权重都来自 `eval/configs/retrieval.yaml`，与 `FUSION_CONFIGS` 一致。embedding revision 钉为 `5617a9f61b028005a4858fdac845db406aefb181`。四条硬断言在这次运行里都通过：范例不在 `split.eval`、不是查询自己、每条查询每种配置恰好 3 条、content 的 sources 没有 style、style 的 sources 只有 style。
+
+下面是 k = 2 的描述统计。剖面差用了 eval 原文，只描述范例和目标原文的距离，不改 §4.6。
+
+| 配置 | bm25 | dense | style | 只来自 style | 只来自内容两路 | 同作品 | 剖面差均值 |
+|---|---|---|---|---|---|---|---|
+| equal | 0.983 | 1.000 | 0.331 | 0.000 | 0.669 | 0.992 | 0.775 |
+| balanced | 0.559 | 0.559 | 0.873 | 0.322 | 0.127 | 0.737 | 0.661 |
+| content | 1.000 | 1.000 | 0.000 | 0.000 | 1.000 | 0.992 | 0.828 |
+| style | 0.000 | 0.000 | 1.000 | 1.000 | 0.000 | 0.373 | 0.626 |
+
+k = 2 的两两 Jaccard（前 2 条 id 集合，对 59 条查询取平均）：
+
+|  | equal | balanced | content | style |
+|---|---|---|---|---|
+| equal |  | 0.379 | 0.740 | 0.034 |
+| balanced |  |  | 0.164 | 0.328 |
+| content |  |  |  | 0.006 |
+
+报告里的 `commit` 是生成时的 HEAD `03dd5b0`。分布、按作品分组和 k = 1、3 都在报告文件里。
+
 ## 2026-10-07 EDT T1.5 前半：三路装配与 few-shot prompt
 
 预注册在看到任何生成结果之前单独提交（`a7b1f1c`），规则在 SPEC §4.6。本轮没有生成，也没有 k 扫描。主配置 balanced、k = 2 是预注册时按论证选定的，还没有数据，不能把它说成更好。

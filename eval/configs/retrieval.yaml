@@ -1,0 +1,26 @@
+# 检索计划的期望值。revision 取自 retrieval/data/embeddings.meta.json。
+# 权重与 retrieval/hybrid.py 的 FUSION_CONFIGS 必须一致，测试会核对。
+embedding_model: BAAI/bge-m3
+embedding_revision: 5617a9f61b028005a4858fdac845db406aefb181
+max_length: 512
+depth: 20
+rrf_k: 60
+primary_config: balanced
+primary_k: 2
+configs:
+  equal:
+    bm25: 1.0
+    dense: 1.0
+    style: 1.0
+  balanced:
+    bm25: 0.5
+    dense: 0.5
+    style: 1.0
+  content:
+    bm25: 1.0
+    dense: 1.0
+    style: 0.0
+  style:
+    bm25: 0.0
+    dense: 0.0
+    style: 1.0

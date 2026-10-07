@@ -71,6 +71,44 @@ def test_budget_accepts_equality_and_rejects_one_extra_token() -> None:
     assert str(MAX_SEQ_LENGTH) in text
 
 
+class _RecordingTokenizer:
+    def __init__(self) -> None:
+        self.templates: list[dict[str, object]] = []
+        self.calls: list[dict[str, object]] = []
+
+    def apply_chat_template(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        tokenize: bool = True,
+        add_generation_prompt: bool = False,
+    ) -> str:
+        self.templates.append(
+            {
+                "messages": messages,
+                "tokenize": tokenize,
+                "add_generation_prompt": add_generation_prompt,
+            }
+        )
+        return "渲染后的提示"
+
+    def __call__(self, prompt: str, *, add_special_tokens: bool = True) -> dict[str, list[int]]:
+        self.calls.append({"prompt": prompt, "add_special_tokens": add_special_tokens})
+        return {"input_ids": [7, 8, 9]}
+
+
+def test_injected_tokenizer_counts_the_rendered_string() -> None:
+    from infra.qwen_prompt_tokenizer import QwenPromptTokenizer
+
+    tokenizer = _RecordingTokenizer()
+    messages = build_prompt("张三去井边", [])
+    assert QwenPromptTokenizer(tokenizer).count(messages) == 3
+    assert tokenizer.templates == [
+        {"messages": messages, "tokenize": False, "add_generation_prompt": True}
+    ]
+    assert tokenizer.calls == [{"prompt": "渲染后的提示", "add_special_tokens": False}]
+
+
 def test_qwen_tokenizer_module_does_not_import_transformers() -> None:
     env = os.environ.copy()
     env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])

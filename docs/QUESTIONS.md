@@ -1,5 +1,25 @@
 # QUESTIONS
 
+## Q25 — 检索计划的统计口径、作品名与计数路径（2026-10-07，按假设实现）
+
+**问题**
+检索计划要写每种配置在 k = 1、2、3 下的路贡献、同作品比例和剖面差，没有写这些比例的分母，也没有写剖面差是先对一条查询的 k 个范例平均、还是把所有范例槽位放进一个分布。
+报告「不得有任何正文」，但「按 work 分组」又必须有分组键。作品名算不算正文，没有写。
+`retrieval.yaml` 钉的是检索期望，不是 `EvalConfig`。风格参考从哪份配置加载，没有写。
+Q24 假设 `QwenPromptTokenizer` 自己加载 `Qwen/Qwen2.5-3B-Instruct`。WSL2 审计要求改成调用方注入，并且计数走 `tokenize=False` 再 `add_special_tokens=False`。`generate_one` 在第二步还传了 `return_tensors="pt"`。这次要不要把这一项也传上，没有写。
+报告嵌进后一个 commit 时，`commit` 字段指向哪一次，与 Q22 同一类问题。
+
+**假设**
+路贡献、只来自 style、只来自内容两路、同作品比例的分母都是范例槽位（查询数 × k）。只来自 style 指 `sources` 恰好是 `{style}`。只来自内容两路指没有 style、且有 bm25 或 dense。同作品指范例在训练池里的 `work` 等于该查询的 `work`。
+剖面差沿用 T1.3：每条范例先算与该查询原文的 `profile_gap_per_case`，一条查询再对这 k 个数取平均，然后对这些查询级均值做 `summarize`。按 work 分组时，单位仍是该作品的查询。这些数字只描述，不改 §4.6 的主配置、权重、k 和深度。
+查询顺序是 `pairs.jsonl` 里的出现顺序。作品名作为分组键写入报告，白话和原句不写入。
+风格参考用 `eval/configs/eval59.yaml` 的 `load_style_reference`。`retrieval.yaml` 只钉模型标识、revision、`max_length`、深度、`rrf_k` 和四套权重。
+计数不传 `return_tensors`。审计写明的是先得到字符串、再不带特殊符号地分词，这条路径不依赖 torch。`FakePromptTokenizer` 仍按字符数，只给 prompt 单测用。Q24 里「计数器自己加载分词器」不再成立。
+`commit` 是生成时的 `git rev-parse HEAD`，这次是 `03dd5b06ce75f530cda1d8bac2aedc42bf5b4a2b`。它不能指向包含这份报告的那次提交。
+
+**影响范围**
+`scripts/build_retrieval_plan.py`、`eval/reports/retrieval-plan.json`、`infra/qwen_prompt_tokenizer.py`。后面的生成脚本只读这份计划。
+
 ## Q24 — 查询向量脚本的形态、token 计数与包的延迟导入（2026-10-07，按假设实现）
 
 **问题**
