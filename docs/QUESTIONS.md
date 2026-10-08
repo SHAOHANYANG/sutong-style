@@ -1,5 +1,31 @@
 # QUESTIONS
 
+## Q30 — agent 评估脚本的若干未写明之处（2026-10-07，按假设实现）
+
+**问题**
+SPEC §4.8 定了四个臂和判定规则，但下面几处没有写：
+1. 加载函数挪到哪个模块、连不连 `EvalConfig` 一起挪。
+2. 修订轮的 prompt 超预算时怎么让整次运行停下来：generate 节点会把普通异常变成兜底结果。
+3. 同一个修订 prompt 第二次出现时要不要再解码。
+4. 兜底（生成器异常）的样本怎么处理。
+5. 最终没有选中任何一轮的样本，违规转移表里怎么计。
+6. 「字数比」用什么长度；`cjk_numeral_ratio` 的逐条配对量取什么。
+7. PLAN 的出口条件「`hallucination_rate` 明显下降」没有可执行的定义。
+8. 对照组的两份报告是重算还是读已提交的。
+
+**假设**
+1. 新建 `eval/loaders.py`，`EvalConfig`、`load_config`、`load_style_reference`、`load_gazetteer` 一起挪过去（后两个的签名依赖前两个）；`eval/run_eval.py` 重新导出这四个名字，原有调用方不用改。
+2. 缓存生成器把预算超限转成 `SystemExit`，穿过节点里的 `except Exception`，整次运行立即停止，不写清单。
+3. 不再解码，直接取缓存。贪心解码下同一个 prompt 的输出必然相同；这种情况出现在上一轮输出和违规都没变的时候。清单里 `model_calls` 是真实解码次数，`cache_hits` 是取缓存的次数（含每条样本的第一轮）。
+4. 第一轮来自基线文件，不会失败；第一轮没有结果或与基线不同，脚本直接报错退出。修订轮的生成器异常按 §4.4 走兜底，样本照常写入并参与评估，同时打一条 warning 日志，清单和汇总里逐条列出 id 与兜底种类。
+5. 记为「最终没有违规」，兜底本身另行列出（见上）。
+6. 字数比取 `len(输出) / len(原文)`，不去标点；逐条配对量取输出在 `cjk_numeral_ratio` 这一维的 z 值（配对相减时原文那一项相消，等于该维剖面差的配对差）。两项都只报告，不判好坏。
+7. 按 §4.8 的统一规则判：主臂对 `retrieval-balanced-k2` 的 `hallucination_rate` 区间不含 0 且方向为下降，才记为达到。照实报告，不因结果调整。
+8. 读 `eval/reports/` 里已提交的那两份，并逐条核对报告里的 `output_hash` 与生成文件一致，对不上就报错退出；不重算，避免把已提交的报告覆盖掉。
+
+**影响范围**
+`eval/loaders.py`、`eval/run_eval.py`、`scripts/run_agent_eval.py`、`scripts/eval_agent.py`、`tests/test_agent_eval.py`、README。§1.2、§4.6、§4.7、§4.8 不改。
+
 ## Q29 — TraceEvent 时钟注入、payload 键名与 rounds 是否存完整违规（2026-10-07，按假设实现）
 
 **问题**

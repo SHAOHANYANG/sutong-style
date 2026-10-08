@@ -143,6 +143,31 @@ uv run python -m scripts.eval_sweep
 
 扫描先写 k = 0，并和 `corpus/generations/lora-eval59.jsonl` 逐条比对。有一条不同就停，不跑其余 12 组。生成文件在 `corpus/generations/`，不提交。清单在 `eval/reports/retrieval-sweep-manifest.json`。
 
+### agent 评估
+
+四个臂（范例来源 balanced k = 2 / 不给范例，反馈格式 followup / restate），主臂是 `agent-balanced-k2-followup`，判定规则见 [SPEC 4.8](docs/SPEC.md#48-agent-评估的运行臂与判定规则预注册)。README 指标表的 agent 行等主臂的数字出来再填，现在还是空的。
+
+agent 每一轮都要当场做保真检查和文体打分，所以这一步在 WSL2 里还需要 `langgraph`、`cn2an`、`python-dotenv`。先把现有环境的版本锁住再装，保证不改动任何已装的包（torch / transformers 不动）：
+
+```bash
+uv pip freeze --python ~/venvs/sutong/bin/python > /tmp/sutong-freeze.txt
+uv pip install --python ~/venvs/sutong/bin/python -c /tmp/sutong-freeze.txt \
+  "langgraph>=1.2.14" cn2an python-dotenv
+```
+
+```bash
+~/venvs/sutong/bin/python -m scripts.run_agent_eval --dry-run
+~/venvs/sutong/bin/python -m scripts.run_agent_eval --adapter adapters/sutong-v2/adapter
+```
+
+```bash
+uv run python -m scripts.eval_agent
+```
+
+`--dry-run` 不加载模型，只核对计划和两个基线文件，并打印每个臂第一轮就有违规的样本数（只有这些样本需要真实生成）。第一轮不重新解码：它的 prompt 和 k 扫描里对应组的逐字相同，输出按 `prompt_sha256` 从 `retrieval-balanced-k2.jsonl` 和 `retrieval-k0.jsonl` 里取，找不到对应的 sha 就在加载模型之前报错退出。修订轮的 prompt 超出 4096 − 768 的预算同样直接报错，不截断。中断后重跑同一条命令会跳过已写完的样本。
+
+生成文件是 `corpus/generations/agent-*.jsonl`，含正文，不提交。清单在 `eval/reports/agent-run-manifest.json`。评估回到 Windows 跑，写出四份 `eval/reports/agent-*.json` 和汇总 `agent-eval.json` / `agent-eval.md`。汇总把指标分成 agent 直接优化的和没有优化的两张表：校验器与评估用的是同一套规则，前一张表的改善有一部分是构造使然，必须连同后一张一起读。
+
 ## Quickstart
 
 <!-- TODO(T3.4) -->

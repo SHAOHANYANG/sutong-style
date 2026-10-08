@@ -9,11 +9,9 @@ import os
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
 import structlog
-import yaml
 from pydantic import BaseModel, Field
 
 from eval.fidelity import assess
@@ -26,11 +24,17 @@ from eval.judge import (
     style_win_rate,
     vote_tally,
 )
+
+# Re-exported: other scripts import these names from here. They live in eval.loaders
+# so the agent run can load them without pulling in eval.judge.
+from eval.loaders import EvalConfig as EvalConfig
+from eval.loaders import load_config as load_config
+from eval.loaders import load_gazetteer as load_gazetteer
+from eval.loaders import load_style_reference as load_style_reference
 from eval.metrics import profile_gap, profile_gap_per_case, signed_mean_delta
 from scripts.vernacularize import text_similarity
 from stylometry.distance import StyleReference
 from stylometry.features import FEATURE_NAMES
-from stylometry.lexicon import LiteraryLexicon
 
 LOGGER = structlog.get_logger()
 AGGREGATE_FIELDS = (
@@ -44,23 +48,6 @@ AGGREGATE_FIELDS = (
     "copy_ratio",
     "ppl",
 )
-
-
-class EvalConfig(BaseModel):
-    """Committed baseline settings. Paths are relative to the working directory."""
-
-    pipeline: str
-    model: str
-    seed: int
-    cases: str
-    style_reference: str
-    lexicon: str
-    gazetteer: str
-    judge_model: str
-    judge_prompt: str
-    opponent: Literal["vernacular"]
-    split: str | None = None
-    """Keep only cases whose split matches. None evaluates the whole file."""
 
 
 class EvalCase(BaseModel):
@@ -106,13 +93,6 @@ class EvalReport(BaseModel):
     per_case: list[CaseReport] = Field(default_factory=list)
 
 
-def load_config(path: Path) -> EvalConfig:
-    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(f"配置不是映射：{path}")
-    return EvalConfig.model_validate(payload)
-
-
 def load_cases(path: Path) -> list[EvalCase]:
     cases: list[EvalCase] = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -129,24 +109,6 @@ def load_generations(path: Path) -> dict[str, Generation]:
         row = Generation.model_validate_json(line)
         generations[row.id] = row
     return generations
-
-
-def load_style_reference(config: EvalConfig) -> StyleReference:
-    lexicon = LiteraryLexicon.model_validate_json(Path(config.lexicon).read_text(encoding="utf-8"))
-    payload = json.loads(Path(config.style_reference).read_text(encoding="utf-8"))
-    return StyleReference(
-        mean=np.array(payload["mean"], dtype=np.float64),
-        std=np.array(payload["std"], dtype=np.float64),
-        lexicon=lexicon,
-    )
-
-
-def load_gazetteer(path: Path) -> set[str]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    words = payload["words"]
-    if not isinstance(words, list):
-        raise ValueError("gazetteer words 不是列表")
-    return {word for word in words if isinstance(word, str)}
 
 
 def output_hash(text: str) -> str:
