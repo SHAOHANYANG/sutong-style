@@ -247,6 +247,7 @@ uv run python -m scripts.two_pass_preview
 - 5 条自编示例（`corpus/sample_public.jsonl`）
 
 复现需自备文本。LoRA adapter 权重发布在 Hugging Face Hub，model card 已标注训练数据来源与用途限制。
+发布前可运行 `uv run python -m scripts.check_corpus_leak --history` 检查当前跟踪文件及 Git 历史中的原文泄漏。
 
 ## 已知局限
 
