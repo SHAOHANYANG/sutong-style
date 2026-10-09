@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 import scripts.check_corpus_leak as leak
 from scripts.check_corpus_leak import (
     build_sources,
@@ -131,3 +133,30 @@ def test_history_finds_deleted_blob_and_all_exit_codes(tmp_path: Path) -> None:
                 find_hits(text, sources.original, 6, f"{commit}:{path}", "original")
             )
     assert history_hits and history_hits[0].location.endswith(":leak.txt")
+
+
+def test_missing_corpus_is_an_error_not_a_clean_result(tmp_path: Path, monkeypatch) -> None:
+    tracked = tmp_path / "tracked.txt"
+    tracked.write_text("原创句子甲乙丙丁戊己", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(leak, "tracked_paths", lambda _: [tracked])
+    monkeypatch.setattr(sys, "argv", ["check", "--pairs", str(tmp_path / "absent.jsonl")])
+    with pytest.raises(SystemExit, match="没有读到任何原文片段"):
+        main()
+
+
+def test_chunks_without_a_pair_still_count_as_original(tmp_path: Path) -> None:
+    pairs = tmp_path / "pairs.jsonl"
+    write_pairs(pairs, "配对里的原创句子甲乙", "白话句子一二三四五六")
+    chunks = tmp_path / "chunks.jsonl"
+    chunks.write_text(
+        json.dumps({"original": "没有配对的原创片段丙丁"}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    tracked = tmp_path / "tracked.txt"
+    tracked.write_text("没有配对的原创片段丙丁", encoding="utf-8")
+    without = build_sources(pairs, tmp_path / "none", 6)[0]
+    assert scan_files([("tracked.txt", tracked)], without, 6)[0] == []
+    with_chunks = build_sources(pairs, tmp_path / "none", 6, chunks)[0]
+    hits = scan_files([("tracked.txt", tracked)], with_chunks, 6)[0]
+    assert [hit.kind for hit in hits] == ["original"]

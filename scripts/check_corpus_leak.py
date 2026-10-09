@@ -67,7 +67,10 @@ def window_hash(fragment: str) -> str:
 
 
 def build_sources(
-    pairs_path: Path, raw_dir: Path, min_chars: int
+    pairs_path: Path,
+    raw_dir: Path,
+    min_chars: int,
+    chunks_path: Path | None = None,
 ) -> tuple[CorpusSources, SourceStats, list[SkippedFile]]:
     original: set[str] = set()
     vernacular: set[str] = set()
@@ -82,6 +85,12 @@ def build_sources(
                 original.update(windows(str(record.get("original", "")), min_chars))
                 vernacular.update(windows(str(record.get("vernacular", "")), min_chars))
                 records += 1
+    # Chunks that never became a pair are original prose too.
+    if chunks_path is not None and chunks_path.exists():
+        with chunks_path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip():
+                    original.update(windows(str(json.loads(line).get("original", "")), min_chars))
     if raw_dir.exists():
         for path in sorted(raw_dir.rglob("*")):
             if not path.is_file():
@@ -255,6 +264,7 @@ def result_payload(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pairs", type=Path, default=Path("corpus/pairs.jsonl"))
+    parser.add_argument("--chunks", type=Path, default=Path("corpus/chunks.jsonl"))
     parser.add_argument("--raw-dir", type=Path, default=Path("corpus/raw"))
     parser.add_argument("--min-chars", type=int, default=12)
     parser.add_argument("--history", action="store_true")
@@ -265,7 +275,14 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     repo = Path.cwd()
-    sources, source_stats, skipped = build_sources(args.pairs, args.raw_dir, args.min_chars)
+    sources, source_stats, skipped = build_sources(
+        args.pairs, args.raw_dir, args.min_chars, args.chunks
+    )
+    if not sources.original:
+        # Nothing to compare against must not read as a clean result.
+        raise SystemExit(
+            f"没有读到任何原文片段（{args.pairs}、{args.chunks}、{args.raw_dir}），无法判断是否泄漏"
+        )
     paths = [(str(path.relative_to(repo)), path) for path in tracked_paths(repo)]
     hits, tracked_skipped = scan_files(paths, sources, args.min_chars)
     skipped.extend(tracked_skipped)
