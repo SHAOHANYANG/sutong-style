@@ -22,14 +22,14 @@ Phase 0 全部完成。Phase 1（检索）全部完成，出口条件（README �
 ### 提交历史
 
 ```
-5cc48a9  feat(train): 训出 sutong-v2 基线并填 README 指标表 (T0.5)
-5a1da71  fix(eval): 把 copy_ratio 均值放进 aggregate (T0.4)
-8d94210  fix(eval): 相同候选记为 identical，并记录 copy_ratio (T0.4)
-b1278b0  feat(eval): 编排评估，评委默认 deepseek-v4-pro 并记录胜负平 (T0.4)
-1331264  fix(eval): 实体主通道改用人工表，并滤掉补充通道的碎片和高频词 (T0.3)
-88e87eb  feat(eval): 实现实体、数值和称谓保真指标 (T0.3)
-2ab34cd  docs(spec): 写明风格参照用全部原文是有意的 (T0.2)
-b49f748  feat(stylometry): 实现 20 维文体特征与风格距离 (T0.2)
+8c3a32c  feat(train): 训出 sutong-v2 基线并填 README 指标表 (T0.5)
+9d3ff8e  fix(eval): 把 copy_ratio 均值放进 aggregate (T0.4)
+cb7e599  fix(eval): 相同候选记为 identical，并记录 copy_ratio (T0.4)
+93d64b3  feat(eval): 编排评估，评委默认 deepseek-v4-pro 并记录胜负平 (T0.4)
+fe67dc3  fix(eval): 实体主通道改用人工表，并滤掉补充通道的碎片和高频词 (T0.3)
+edf3f5d  feat(eval): 实现实体、数值和称谓保真指标 (T0.3)
+c35bfc5  docs(spec): 写明风格参照用全部原文是有意的 (T0.2)
+56a48d5  feat(stylometry): 实现 20 维文体特征与风格距离 (T0.2)
 ```
 
 T0.0（语料重建）的 commit 更早，不在此列。

@@ -336,7 +336,7 @@
       "sha256": "1e5db348c11a99f52d01fd8e8203f8a1db24187a6781e4748780459d95a1053f"
     }
   },
-  "commit": "d4f496de1b9b88bfed876e7530cf5fb741eee747",
+  "commit": "7ff1cf82ed9af53f26f87198e6f535f12968a668",
   "decoding": "greedy",
   "echo_guard": true,
   "experiment": "v2",

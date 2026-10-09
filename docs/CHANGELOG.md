@@ -6,7 +6,7 @@
 
 ## 2026-10-09 EDT T2.5 第二轮：回显防护与 system 反馈格式
 
-规则是 SPEC §4.9，在写代码和跑 GPU 之前提交（`05f88f4`）。生成在 WSL2（2026-10-09T18:28Z，代码 `d4f496d`，sutong-v2，贪心解码，seed 42），六个臂共约 19 分钟，评估在 Windows。数字取自 `eval/reports/agent2-eval.*`、六份 `agent2-*.json` 和 `agent2-run-manifest.json`。§4.8 的规则、结论和 README 那一行没有动。
+规则是 SPEC §4.9，在写代码和跑 GPU 之前提交（`d66d84f`）。生成在 WSL2（2026-10-09T18:28Z，代码 `7ff1cf8`，sutong-v2，贪心解码，seed 42），六个臂共约 19 分钟，评估在 Windows。数字取自 `eval/reports/agent2-eval.*`、六份 `agent2-*.json` 和 `agent2-run-manifest.json`。§4.8 的规则、结论和 README 那一行没有动。
 
 ### 做了什么
 
@@ -218,7 +218,7 @@ PLAN 出口条件（hallucination_rate 明显下降）：未达到（结论：�
 
 ## 2026-10-09 EDT T2.5：agent 评估（Phase 2 出口）
 
-数字取自 `eval/reports/agent-eval.*`、四份 `agent-*.json` 和 `agent-run-manifest.json`，不手算。规则是 SPEC §4.8，在写代码和跑 GPU 之前提交（`1c61ca2`）。生成在 WSL2（2026-10-08T01:48Z，代码 `eab19fd`，sutong-v2，贪心解码，seed 42），评估在 Windows（`--skip-judge`）。主臂是预注册的 `agent-balanced-k2-followup`，其余三臂是**探索性的**。
+数字取自 `eval/reports/agent-eval.*`、四份 `agent-*.json` 和 `agent-run-manifest.json`，不手算。规则是 SPEC §4.8，在写代码和跑 GPU 之前提交（`4ad9826`）。生成在 WSL2（2026-10-08T01:48Z，代码 `e8cb446`，sutong-v2，贪心解码，seed 42），评估在 Windows（`--skip-judge`）。主臂是预注册的 `agent-balanced-k2-followup`，其余三臂是**探索性的**。
 
 ### 主臂结论
 
@@ -510,7 +510,7 @@ PLAN 出口条件（hallucination_rate 明显下降）：未达到（结论：�
 
 ## 2026-10-07 EDT T1.5 后半之二：k 扫描脚本与判定规则
 
-判定规则在看到扫描结果之前单独提交（`b10d57e`），写在 SPEC §4.7。§4.6 没有改。主配置仍是 balanced、k = 2，对照是同一次扫描的 k = 0。
+判定规则在看到扫描结果之前单独提交（`dfded45`），写在 SPEC §4.7。§4.6 没有改。主配置仍是 balanced、k = 2，对照是同一次扫描的 k = 0。
 
 `scripts/sweep_topk.py` 按检索计划生成 13 组。解码和 `scripts/generate.py` 共用 `greedy_decode`。k = 0 先和 `corpus/generations/lora-eval59.jsonl` 逐条比对，有一条不同就停。`scripts/eval_sweep.py` 用 `--skip-judge` 的路径汇总，不读 `.env`。两个诊断量在 `eval/exemplar_diagnostics.py`。
 
@@ -539,11 +539,11 @@ k = 2 的两两 Jaccard（前 2 条 id 集合，对 59 条查询取平均）：
 | balanced |  |  | 0.164 | 0.328 |
 | content |  |  |  | 0.006 |
 
-报告里的 `commit` 是生成时的 HEAD `03dd5b0`。分布、按作品分组和 k = 1、3 都在报告文件里。
+报告里的 `commit` 是生成时的 HEAD `0356e41`。分布、按作品分组和 k = 1、3 都在报告文件里。
 
 ## 2026-10-07 EDT T1.5 前半：三路装配与 few-shot prompt
 
-预注册在看到任何生成结果之前单独提交（`a7b1f1c`），规则在 SPEC §4.6。本轮没有生成，也没有 k 扫描。主配置 balanced、k = 2 是预注册时按论证选定的，还没有数据，不能把它说成更好。
+预注册在看到任何生成结果之前单独提交（`cdcd37e`），规则在 SPEC §4.6。本轮没有生成，也没有 k 扫描。主配置 balanced、k = 2 是预注册时按论证选定的，还没有数据，不能把它说成更好。
 
 `retrieval/hybrid.py` 把三路接起来。BM25 和 dense 用查询文本，style 用预测后的 z 向量。权重为 0 的路不查询。三个索引的 id 集合不一致就拒绝构造。`retrieval/prompt.py` 按训练时的 system 文本拼多轮范例，排名第 1 的范例紧挨真正的输入；k = 0 与 `build_messages(vernacular, None)` 相同。prompt token 数加 768 超过 4096 就报错，不截断。
 
@@ -559,7 +559,7 @@ dense 查询向量另写 `scripts/build_query_cache.py`，默认目录 `retrieva
 
 （端到端「预测向量 vs 直接用输入特征」的生成对照原定留到 T1.6；T1.6 扫描未单独设该对照，结论仍止于本条的检索层消融。见 2026-10-07 T1.6。）
 
-预注册规则在看到结果之前单独提交（`116e486`）。判定只用 743 条训练对的 5 折，eval 59 条只作描述。度量是召回范例与查询原文的逐条剖面差，主分析 k = 3。
+预注册规则在看到结果之前单独提交（`8e4b7cc`）。判定只用 743 条训练对的 5 折，eval 59 条只作描述。度量是召回范例与查询原文的逐条剖面差，主分析 k = 3。
 
 **有优势，预测器保留。** k = 3 的五组均值：predicted 0.607，raw 0.714，mean 0.752，oracle 0.454，random 0.998。oracle 最小。`predicted − raw` 的均值是 -0.107，95% 区间 [-0.119, -0.094]；`predicted − mean` 的均值是 -0.145，区间 [-0.156, -0.134]。两个区间都整体小于 0。raw 的均值小于 mean，按输入查比永远查均值有信息量。五折选出的 alpha 都是 10，用全部 743 条再选也是 10。
 
@@ -721,7 +721,7 @@ jieba 专名加词表，原因在 Q17。`pytest --cov=eval` 覆盖率 100%。未
 无法归一化的原文数值判失败。只重跑尚未进入 pairs 的失败项，使用新报告，不重切
 `split.json`。
 
-**2026-10-05T19:12:07–19:14:21Z 重跑结果**（代码 `5cbc881`，155 次调用全部为
+**2026-10-05T19:12:07–19:14:21Z 重跑结果**（代码 `f2b5f19`，155 次调用全部为
 `deepseek-v4-pro`，模板哈希仍是 `38fd364e…`，temperature 0.2 / top_p 1 /
 max_tokens 2048 / thinking disabled / retries 0 / round 2 / seed 42）。启动时
 already_done=760、remaining=155。没有接口失败。`split.json` 未改，备份里的
@@ -758,7 +758,7 @@ PINC-4/6 修补下降容忍从历史实验的 0.03 改为 0，只适用于本冻
 获准一次固定 20 条 `deepseek-v4-pro` 预览；全量 907 条未获准。本节在调用前写入，
 不在看到结果前改 prompt、词表或门槛。
 
-**2026-10-05T17:16:00–17:16:37Z 预览结果**（commit `33daabc`，40 个不同响应全部为
+**2026-10-05T17:16:00–17:16:37Z 预览结果**（commit `c5f342e`，40 个不同响应全部为
 `deepseek-v4-pro`，temperature 0.2 / top_p 1 / max_tokens 2048 / thinking disabled，
 沿用固定名单与逐条 seed，零重试）。下列为逐句宏均值；样本标准差。历史四列是原报告
 复算，与当时公布的 PINC-4/6、sBLEU 均值一致。
@@ -789,7 +789,7 @@ round 2，seed 42。PINC-1/2/3/4/6 与 sBLEU 逐条记录但不拦截。放宽 P
 本节在全量调用前写入。环境里的 `VERNACULARIZE_MODEL=deepseek-chat` 是 Flash 别名，
 全量进程内强制改为 `deepseek-v4-pro`，不改 `.env`。
 
-**2026-10-05T18:28:06–18:41:21Z 全量结果**（code `d6d58a4`，915 条全部返回
+**2026-10-05T18:28:06–18:41:21Z 全量结果**（code `ea415aa`，915 条全部返回
 `deepseek-v4-pro`，模板哈希与 pro_control 相同，零重试，无模型身份错误）。
 PINC/sBLEU 是全部 915 条的逐句宏分布，含未进入 pairs 的 155 条。样本标准差：
 
@@ -833,7 +833,7 @@ SPEC1.5.2登记两次人工确认闸门及后续窄修补方案：第二遍仅�
 
 ## 2026-10-03 T0.0 两段式一次预览结果与恢复审阅
 
-实际运行UTC21:49:09–21:49:43（本地EDT17:49），生成快照c01132b；20条、两遍共40个
+实际运行UTC21:49:09–21:49:43（本地EDT17:49），生成快照86e1941；20条、两遍共40个
 不同响应，全部deepseek-v4-pro，temperature0.2/top_p1/max_tokens2048/thinking disabled，
 沿用逐条seed、零重试。恢复时发现已完成，新增API调用0次，不再跑第二轮。
 下列PINC/sBLEU是固定中文字符口径的逐句宏均值，旧输出补算不替换历史判定。

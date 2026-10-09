@@ -224,7 +224,7 @@
       "sha256": "1e5db348c11a99f52d01fd8e8203f8a1db24187a6781e4748780459d95a1053f"
     }
   },
-  "commit": "eab19fd3cd0580c2fc62c5f2fecf2abe87ddc188",
+  "commit": "e8cb446eb11bd10824f862a3bc30c1566e401cbe",
   "decoding": "greedy",
   "max_generations": 3,
   "max_new_tokens": 768,

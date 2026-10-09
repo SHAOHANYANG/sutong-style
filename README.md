@@ -283,4 +283,6 @@ uv run python -m scripts.two_pass_preview
 
 ## License
 
-<!-- TODO(T0.1) -->
+代码以 [MIT License](LICENSE) 发布。
+
+这份许可只覆盖本仓库里的代码、文档和已提交的衍生数据（词表、专名表、统计量、评估报告）。苏童作品的原文不在仓库里，也不在许可范围内；语料需自备，见上方「数据与版权」。

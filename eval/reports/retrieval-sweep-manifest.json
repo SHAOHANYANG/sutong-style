@@ -1,6 +1,6 @@
 {
   "adapter": "adapters/sutong-v2/adapter",
-  "commit": "b1aa6e86ea59fecc34a2921cb5465818d5324c8c",
+  "commit": "85314580ab85c8b0e9719091b80e7dc8d3f90504",
   "groups": {
     "retrieval-balanced-k1": {
       "fusion_config": "balanced",

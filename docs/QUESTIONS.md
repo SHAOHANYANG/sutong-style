@@ -151,7 +151,7 @@ Q24 假设 `QwenPromptTokenizer` 自己加载 `Qwen/Qwen2.5-3B-Instruct`。WSL2 
 查询顺序是 `pairs.jsonl` 里的出现顺序。作品名作为分组键写入报告，白话和原句不写入。
 风格参考用 `eval/configs/eval59.yaml` 的 `load_style_reference`。`retrieval.yaml` 只钉模型标识、revision、`max_length`、深度、`rrf_k` 和四套权重。
 计数不传 `return_tensors`。审计写明的是先得到字符串、再不带特殊符号地分词，这条路径不依赖 torch。`FakePromptTokenizer` 仍按字符数，只给 prompt 单测用。Q24 里「计数器自己加载分词器」不再成立。
-`commit` 是生成时的 `git rev-parse HEAD`，这次是 `03dd5b06ce75f530cda1d8bac2aedc42bf5b4a2b`。它不能指向包含这份报告的那次提交。
+`commit` 是生成时的 `git rev-parse HEAD`，这次是 `0356e417bd6d180e79a6df2d7b452b54c15ec1cc`。它不能指向包含这份报告的那次提交。
 
 **影响范围**
 `scripts/build_retrieval_plan.py`、`eval/reports/retrieval-plan.json`、`infra/qwen_prompt_tokenizer.py`。后面的生成脚本只读这份计划。
@@ -193,7 +193,7 @@ rank 检查看的是 rank 值的集合是否等于 {1, ..., n}，不要求列表
 
 **假设**
 这两条都是跑消融之前写进代码的。oracle 检查覆盖训练折的 k = 1 和 k = 3。任何一组的均值比 oracle 更小就退出，不写报告，也不下结论。均值相等不算失败。
-报告里的 `commit` 是生成时的 `git rev-parse HEAD`。这次是预注册提交 `116e486`。消融代码和报告在下一个 commit 里，这个字段不能指向包含它自己的那次提交。
+报告里的 `commit` 是生成时的 `git rev-parse HEAD`。这次是预注册提交 `8e4b7cc`。消融代码和报告在下一个 commit 里，这个字段不能指向包含它自己的那次提交。
 
 **影响范围**
 这次 k = 1 和 k = 3 的 oracle 都是五组里最小的，检查没有触发退出。重跑时 HEAD 如果变了，报告里的 `commit` 会跟着变，时间戳以外就不再逐字节相同。
@@ -382,11 +382,11 @@ SPEC 3.3 要求把参照原文和两个候选一起交给评委，但没有写�
 2026-10-03T21:49:09–21:49:43完成同一20条两段式预览，40个不同response id全部返回
 deepseek-v4-pro，无重试。恢复时不再次调用，不把已完成的实验包装成新运行。
 
-流程违规：c01132b冻结前，新增词表测试错误要求高频清单含“蓦然”，断言失败，
+流程违规：86e1941冻结前，新增词表测试错误要求高频清单含“蓦然”，断言失败，
 但上次编排仍继续提交和调用，违反提交前四项全绿。不能隐瞒或改写运行日期/commit。
 本次只修正测试为实际高频词“仿佛”，并令导出CLI用ASCII转义JSON，增加UTF-8/CP936
 无损传输回归测试。prompt、96词清单、采样、seed、闸门与历史输出均不改。
-后续必须逐项检查退出状态，禁止只看组合命令末尾状态。保留c01132b实际生成快照，
+后续必须逐项检查退出状态，禁止只看组合命令末尾状态。保留86e1941实际生成快照，
 补修提交不冒称在本次提交上生成。详细工程失败另入本地resume报告。
 
 抽查发现：jieba专名候选含“富丽/其乐融融/二人”等非专名，可能把风格词意外列为
@@ -497,7 +497,7 @@ T0.1 需实现 `scripts/validate_human_eval.py`，校验：30 条齐全、每条
 
 ---
 
-## Q4 LICENSE 未定 `[待人工]`
+## Q4 LICENSE 未定 `[已解决 2026-10-09：代码用 MIT，见 LICENSE]`
 
 README 末尾留了 TODO。代码本身建议 MIT，但本项目涉及受版权保护的训练语料，adapter 权重的授权条款需要单独考虑。**这是仓库所有者的决定，不要自行选定并提交 LICENSE 文件。**
 

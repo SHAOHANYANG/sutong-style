@@ -596,7 +596,7 @@
       "predicted_minus_raw_mean": 0.053355575424137026
     }
   },
-  "commit": "116e486c4894ecf1261e84140705b6e8a676a905",
+  "commit": "8e4b7cc13995454617bb2a3ce90206331ec3e448",
   "decision": "advantage",
   "eval": {
     "alpha": 10.0,
