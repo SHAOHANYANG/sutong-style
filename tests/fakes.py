@@ -158,6 +158,9 @@ class FakeAgentRetriever:
         index = min(len(self.calls) - 1, len(self.batches) - 1)
         return list(self.batches[index])
 
+    def ping(self) -> bool:
+        return True
+
 
 class FakeAgentGenerator:
     """Programmable chat completions. Call count and message args are recorded."""
@@ -171,6 +174,7 @@ class FakeAgentGenerator:
         self.outputs = list(outputs) if outputs is not None else ["生成结果"]
         self.errors_on = set(errors_on or [])
         self.calls: list[list[dict[str, str]]] = []
+        self.seeds: list[int] = []
         self.node_calls = 0
 
     def generate(self, messages: list[dict[str, str]]) -> str:
@@ -182,6 +186,20 @@ class FakeAgentGenerator:
         if call_index >= len(self.outputs):
             return self.outputs[-1]
         return self.outputs[call_index]
+
+    def generate_with_seed(self, messages: list[dict[str, str]], *, seed: int) -> str:
+        self.seeds.append(seed)
+        return self.generate(messages)
+
+    def ping(self) -> bool:
+        return True
+
+
+class FakeUnhealthyAgentGenerator(FakeAgentGenerator):
+    """Health-check failure without affecting process lifetime."""
+
+    def ping(self) -> bool:
+        return False
 
 
 class FakeAgentVerifier:

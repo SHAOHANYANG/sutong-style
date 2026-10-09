@@ -189,6 +189,20 @@ uv run python -m scripts.eval_agent --experiment v2
 
 ## Quickstart
 
+启动 T3.1 API 骨架（真实 vLLM 装配在 T3.7 接入；当前开发与测试使用注入的 Fake）：
+
+```bash
+uv run uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+SSE 请求会依次返回 `trace`、带轮次的 `token`，最后返回 `done`：
+
+```bash
+curl -N -X POST http://localhost:8000/v1/transform \
+  -H "Content-Type: application/json" \
+  -d '{"text":"他在河边等了三天。","style":"sutong","stream":true,"max_iter":3,"seed":42}'
+```
+
 <!-- TODO(T3.4) -->
 
 ```bash

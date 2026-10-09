@@ -1,5 +1,20 @@
 # QUESTIONS
 
+## Q32 — 同步图桥接 SSE、伪 token、输入上限与 seed（2026-10-09，按假设实现）
+
+**问题**
+`agent` 暴露的是同步 LangGraph 和整段返回的 `Generator.generate(messages)`；T3.1 又要求节点一结束就推 trace、每轮推 token，并要求 seed 透传和记录。现有 `Generator` Protocol 没有 seed 参数。SPEC §5 也没有规定输入长度、token 切块大小、SSE payload 键名或断开连接后的取消语义。
+
+**假设**
+同步图放进 `asyncio.to_thread` 工作线程，用线程安全队列桥接到异步 `StreamingResponse`。工作线程调用 `build_graph().stream(..., stream_mode="values")`，每次节点更新立刻把新增 `TraceEvent` 入队；不用轮询 `run_agent`，也不等最终结果后补 trace。考虑过直接调用同步 `run_agent` 后回放，但不满足实时要求；也考虑过改 agent 节点为 async/callback，但会扩大 T3.1 范围并改动已冻结的 `agent/`。
+
+每个 generate 节点完成后，把该轮整段输出按固定 **24 字符**切成 `token` 事件；payload 为 `{round, text}`，明确它是 UI 增量而非模型原生 token。请求 `text` 上限固定为 **10,000 个 Python 字符**，兼顾 4096-token 模型预算前的服务防护与较长中文输入；纯空白也按空输入拒绝。客户端断开只停止响应消费，不尝试强杀正在执行的同步线程；真实推理取消留到 vLLM 接入后按客户端能力处理。
+
+API 用请求级 generator 适配器：若注入实现提供 `generate_with_seed(messages, *, seed)` 就传入 seed，否则保持旧 Protocol 的 `generate(messages)` 行为；不修改 `agent/nodes.py`。最终 JSON/SSE `done` 以 `AgentResult` 原字段为准，额外带 `seed` 记录服务边界收到的值。T3.7 的真实实现应提供 `generate_with_seed`，否则只能记录、不能影响生成随机性。流式路径用 `build_graph` 时需要在 API 层构造与 `run_agent` 相同的初始 state；这份兼容层只设置既有字段，不改变图逻辑。
+
+**影响范围**
+仅 `api/`、`tests/test_api.py`、`tests/fakes.py` 与 README Quickstart；不改 `agent/`、SPEC、CHANGELOG 或 STATUS。
+
 ## Q31 — 反馈回显：校验器把抄回来的修订指令当成修复（2026-10-09，待人工决定）
 
 **问题**

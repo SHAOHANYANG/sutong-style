@@ -3002,6 +3002,7 @@ default-groups = ["core", "dev"]
 [package.dev-dependencies]
 core = [
     { name = "cn2an" },
+    { name = "fastapi" },
     { name = "jieba" },
     { name = "langgraph" },
     { name = "numpy" },
@@ -3012,8 +3013,10 @@ core = [
     { name = "rank-bm25" },
     { name = "sacrebleu" },
     { name = "structlog" },
+    { name = "uvicorn" },
 ]
 dev = [
+    { name = "httpx" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -3030,6 +3033,7 @@ gpu = [
 [package.metadata.requires-dev]
 core = [
     { name = "cn2an", specifier = ">=0.5.24" },
+    { name = "fastapi", specifier = ">=0.136.3" },
     { name = "jieba", specifier = ">=0.42.1" },
     { name = "langgraph", specifier = ">=1.2.14" },
     { name = "numpy", specifier = ">=2.1" },
@@ -3040,8 +3044,10 @@ core = [
     { name = "rank-bm25", specifier = ">=0.2.2" },
     { name = "sacrebleu", specifier = ">=2.6.0" },
     { name = "structlog", specifier = ">=24.4" },
+    { name = "uvicorn", specifier = ">=0.54.0" },
 ]
 dev = [
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-cov", specifier = ">=5.0" },
