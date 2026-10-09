@@ -1,5 +1,25 @@
 # QUESTIONS
 
+## Q34 — 演示页面与 PLAN T4.1 的出入（2026-10-09，按假设实现）
+
+**问题**
+PLAN T4.1 指定 Vite + React + TS + Tailwind + shadcn/ui，并要求 base 模型与微调模型并排对比、第 1 轮与第 2 轮的 diff 高亮、后端冷启动时的状态提示。当前模型服务只加载微调后的模型；trace 里的检索事件只有范例 id，没有相似度分数和范例类型。
+
+**假设**
+1. 没有引入 shadcn/ui：页面只有两个面板和一个列表，直接用 Tailwind 写，少一层生成代码和依赖。
+2. base 与微调并排对比没有做：需要模型服务同时加载未微调的基座，8GB 显存放不下三个模型。留到换用更大显存或 vLLM 之后。
+3. diff 高亮做了，比较的是第 1 轮与最终采用的那一轮（最终采用第 1 轮时不显示）。按字符做最长公共子序列，中文没有词边界可用。
+4. 检索一行只显示范例 id 和数量。PLAN 示意图里的「风格匹配 0.87」「对话密集型」需要后端在 trace 里多给字段，本次没有改 trace 的结构。
+5. 页面每隔几秒轮询 `/healthz`：连不上、已连上但模型未就绪、已就绪三种状态分别提示，未就绪时页面照常加载、提交按钮禁用。
+6. SSE 按 PLAN 用 `fetch` 加 `ReadableStream` 读取，不用 `EventSource`。
+7. 接口服务加了 CORS，允许的来源由 `SUTONG_CORS_ORIGINS` 配置，默认只放行本地开发服务器。
+
+**验收对照**
+`npm run build` 通过；后端不可用时页面可加载并显示状态；400px 宽度下 `scrollWidth == clientWidth`，无横向溢出；在真实模型上提交请求，面板随 SSE 逐步更新。
+
+**影响范围**
+`web/`、`api/main.py`、`api/settings.py`、`tests/test_service_pipeline.py`、README。
+
 ## Q33 — 服务接入真实模型的方式（2026-10-09，按假设实现）
 
 **问题**

@@ -239,3 +239,17 @@ def test_service_runs_the_assembled_pipeline_end_to_end(tmp_path: Path) -> None:
     assert SYSTEM_LEAD in second[0]["content"]
     assert "「12块」" in second[0]["content"]
     assert second[1:] == first[1:]
+
+
+def test_browser_origins_are_configurable_and_the_dev_server_is_allowed() -> None:
+    assert ServiceSettings().allowed_origins() == ["http://localhost:5173", "http://127.0.0.1:5173"]
+    custom = ServiceSettings.from_env(
+        {"SUTONG_CORS_ORIGINS": "https://a.example, https://b.example"}
+    )
+    assert custom.allowed_origins() == ["https://a.example", "https://b.example"]
+    client = TestClient(app)
+    headers = {"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST"}
+    allowed = client.options("/v1/transform", headers=headers)
+    assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
+    refused = client.options("/v1/transform", headers={**headers, "Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in refused.headers
