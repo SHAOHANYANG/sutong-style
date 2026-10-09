@@ -24,7 +24,6 @@ flowchart LR
 | 评估 | `eval/` | 实体、数值、称谓的规则化保真校验；逐条文体差距；可选的 LLM 成对评判 |
 | 检索 | `retrieval/` | BM25、稠密向量、文体向量三路召回，以加权 RRF 融合；范例以多轮对话形式拼入 prompt |
 | 自检重写环 | `agent/` | 基于 LangGraph 的「生成、校验、打分、路由」循环，最多三轮，环内只使用确定性指标 |
-| 演示页面 | `web/` | 单页前端：输入、流式输出，以及逐步展示检索、生成、校验、修订的执行过程面板 |
 | 服务接口 | `api/` | FastAPI 与 SSE 流式接口，同时推送生成文本与节点执行轨迹；模型由独立的 GPU 进程提供，接口进程不加载模型 |
 
 ## 主要结果
@@ -60,7 +59,6 @@ sutong-style/
 ├── retrieval/         BM25、稠密检索、文体检索、融合与 prompt 构造
 ├── agent/             自检重写环：状态、节点、图、修订 prompt
 ├── api/               FastAPI 服务、SSE 流式接口与真实流水线的装配
-├── web/               演示页面（Vite、React、TypeScript、Tailwind）
 ├── infra/             外部模型的具体实现（嵌入、OpenAI 兼容接口、模型服务客户端）
 ├── scripts/           语料处理、训练、生成、模型服务、各阶段实验与评估脚本
 ├── corpus/            语料目录；原文不入库，仅保留不可还原原文的衍生数据
@@ -111,13 +109,6 @@ python -m scripts.serve_model --adapter adapters/sutong-v2/adapter --host 0.0.0.
 # 进程二：接口服务
 SUTONG_MODEL_BASE_URL=http://localhost:8001/v1 uv run uvicorn api.main:app --port 8000
 ```
-
-```bash
-# 进程三（可选）：演示页面，默认访问 http://127.0.0.1:8000 的接口
-cd web && npm install && npm run dev
-```
-
-演示页面在 http://localhost:5173 打开。页面上方是输入与流式输出，下方的面板随请求进展逐步显示每个节点做了什么：检索到哪些范例、每一轮写了多少字、校验发现了哪些事实改动、为什么重写、最终采用哪一轮。接口地址可用环境变量 `VITE_API_BASE` 指定；接口服务允许访问的页面来源由 `SUTONG_CORS_ORIGINS` 配置。
 
 此时 `/healthz` 返回 200，`/v1/transform` 对每个请求依次执行：三路检索取 2 条风格范例、模型生成、保真校验与文体打分，存在违规时把修订要求写入 system 消息后重新生成，最多三轮。
 

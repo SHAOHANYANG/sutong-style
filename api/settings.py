@@ -24,11 +24,6 @@ class ServiceSettings(BaseModel):
     index_dir: Path = Path("retrieval/data")
     style_config: Path = Path("eval/configs/eval59.yaml")
     retrieval_config: Path = Path("eval/configs/retrieval.yaml")
-    # Browser origins allowed to call the API, comma-separated. The default is the Vite dev server.
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
-
-    def allowed_origins(self) -> list[str]:
-        return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> ServiceSettings:
