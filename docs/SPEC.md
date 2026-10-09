@@ -966,6 +966,12 @@ k 取 {1, 2, 3}，另有不带范例的 k = 0。因为按融合排名取前 k �
 - 六个臂在同一批样本上跑过两轮实验，第二轮的任何结论都是在看过第一轮结果之后做的。
 - 人工抽查由仓库所有者进行，完成之前记为 pending。
 
+**结果（2026-10-09，规则未改；生成于 2026-10-09T18:28Z，代码 commit `d4f496d`）。** 主臂 `agent2-balanced-k2-system` 对 `retrieval-balanced-k2`：`numeral_recall` 均值差 +0.006780，95% 区间 [0, +0.020339]；`hallucination_rate` −0.004237 [−0.012712, 0]；`entity_recall` 配对差恒为 0；`profile_gap_per_case` +0.000866 [−0.002907, +0.006040]。四项判定指标的区间均含 0 → **未检出差异**。`copy_ratio` −0.000351 [−0.001879, +0.000605]、`style_distance` −0.000755、字数比 −0.000352、`cjk_numeral_ratio` 的 z 值 0（只报告）。主臂对 `retrieval-k0`：`numeral_recall` +0.037288 [+0.003390, +0.076271] → 改善，其余未检出差异。第一轮有违规 13 条，最终输出不同于对照 7 条；轮数分布 1 轮 46、2 轮 2、3 轮 11；修掉 2 条数值违规和 1 条幻觉，新引入 0；无兜底。PLAN 出口条件未达到。STATUS §9.5 三目标：`hallucination_rate` 0 达到；`numeral_recall` 0.898305 未达；`profile_gap` 0.208507 未达。
+
+防护：六个臂的最终输出含回显的样本数均为 0。被切过的轮数：`balanced-k2` 的 followup 6、restate 19、system 0；`k0` 的 followup 5、restate 18、system 0。system 格式没有引发回显。
+
+事前预期的核对：followup 预期最终改动接近 0，实际 `balanced-k2` 臂 3 条（修掉 2 条数值）、`k0` 臂 3 条，**预期偏低**，但第一轮实验里靠第 3 轮修掉的 5 条确实没有再出现；restate 预期 `balanced-k2` 臂 2 条正文无违规加 1 条减少，实际修掉 2 条数值和 1 条称谓，`k0` 臂预期 4 条，实际修掉 4 条数值和 1 条称谓，**大体相符**。探索臂里 `agent2-k0-restate` 与 `agent2-k0-system` 的 `numeral_recall` 记为改善（+0.031、+0.040），未做多重比较校正，不替换主臂。人工抽查 pending。完整表见 `eval/reports/agent2-eval.md` 与 CHANGELOG。
+
 ---
 
 ## 5. 服务层（`api/`）

@@ -4,6 +4,218 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-09 EDT T2.5 第二轮：回显防护与 system 反馈格式
+
+规则是 SPEC §4.9，在写代码和跑 GPU 之前提交（`05f88f4`）。生成在 WSL2（2026-10-09T18:28Z，代码 `d4f496d`，sutong-v2，贪心解码，seed 42），六个臂共约 19 分钟，评估在 Windows。数字取自 `eval/reports/agent2-eval.*`、六份 `agent2-*.json` 和 `agent2-run-manifest.json`。§4.8 的规则、结论和 README 那一行没有动。
+
+### 做了什么
+
+- **回显防护**：生成之后、校验之前，切掉输出里抄回来的修订反馈，后面的校验、打分、挑选都只看切过的文本。
+- **第三种反馈格式 system**：反馈接在 system 消息后面，user 轮保持纯输入。动机是第一轮看到模型把 user 轮的全部文字当成要改写的内容。
+- 主臂预先定为 `agent2-balanced-k2-system`：三种格式里只有它的结果无法从第一轮的数据推出来。
+
+### 主臂结论：未检出差异
+
+| 指标 | 检索行（对照） | 第二轮主臂 | 配对均值差 | 95% 区间 | 结论 |
+|---|---|---|---|---|---|
+| numeral_recall | 0.891525 | 0.898305 | +0.006780 | [0, +0.020339] | 未检出差异 |
+| hallucination_rate | 0.004237 | 0.000000 | −0.004237 | [−0.012712, 0] | 未检出差异 |
+| entity_recall | 1.000000 | 1.000000 | 0 | [0, 0] | 未检出差异 |
+| profile_gap_per_case | 0.485262 | 0.486128 | +0.000866 | [−0.002907, +0.006040] | 未检出差异 |
+
+- 13 条第一轮有违规的样本里，修掉 2 条数值、1 条幻觉（就是 59 条里唯一有幻觉的那条），新引入 0，无兜底。最终改动 7 条，其中 5 条违规数没变，只是在线风格分略高而被选中，改动很小。
+- `hallucination_rate` 降到 0，但只涉及 1 条样本，区间含 0，PLAN 出口条件仍然**未达到**。
+- 文体指标基本不动：改 system 消息没有让文风变差，这是事前担心的风险，没有发生。
+
+### 修订轮数分布
+
+| 臂 | 1 轮 | 2 轮 | 3 轮 | 真实解码次数 | 被防护切过的轮 | 最终输出含回显 |
+|---|---|---|---|---|---|---|
+| agent2-balanced-k2-followup | 46 | 0 | 13 | 20 | 6 | 0 |
+| agent2-balanced-k2-restate | 46 | 2 | 11 | 15 | 19 | 0 |
+| agent2-balanced-k2-system（主臂） | 46 | 2 | 11 | 13 | 0 | 0 |
+| agent2-k0-followup | 41 | 1 | 17 | 26 | 5 | 0 |
+| agent2-k0-restate | 41 | 5 | 13 | 19 | 18 | 0 |
+| agent2-k0-system | 41 | 6 | 12 | 20 | 0 | 0 |
+
+防护起了作用：六个臂的最终输出都不再含回显。system 格式下一次回显都没有发生，说明回显确实是「反馈放在 user 轮」引起的。
+
+### 事前预期对不对
+
+- followup：预期最终改动接近 0，实际两个来源各 3 条。**预期偏低**。第一轮靠第 3 轮修掉的那 5 条确实没有再出现，但 `balanced-k2` 臂另有 2 条数值在第 3 轮修好了（`k0` 臂 1 条）。
+- restate：预期只有正文本来就修好的那几条算数（`balanced-k2` 2 条加 1 条减少，`k0` 4 条），实际分别修掉 3 条和 5 条违规，**大体相符**。
+
+### 两轮合起来怎么读
+
+- **这个环在 59 条上没有可靠地改善保真。** 第一轮主臂的 +0.028 来自一条偶然的路径：第 2 轮整段回显，第 3 轮针对那段回显的反馈反而逼出了一版完整改写。防护打开后同一格式是 +0.017，区间 [0, +0.042]，含 0。
+- 探索臂里 `agent2-k0-restate`（+0.031）和 `agent2-k0-system`（+0.040）的 `numeral_recall` 区间不含 0。它们是不给范例的臂，起点更低（0.861），没有做多重比较校正，按规则不替换主臂；照实列出，不据此下结论。
+- 修不掉的违规多数是「一块」「一头」「一遍」「两个」。SPEC §1.5.3 已经写明数值规则对「一 + 量词」偏严，这些未必是真的信息丢失。也就是说 13 条里真正可修的事实错误更少，实验的分辨力很低。
+- 局限照 §4.9：防护规则是看了第一轮输出之后定的，又在同一批样本上检验；两轮都在同样 59 条上跑；人工抽查 pending。
+
+### 完整汇总（`eval/reports/agent2-eval.md` 原样）
+
+主臂是 agent2-balanced-k2-system，对照是 retrieval-balanced-k2（同样 59 条，逐条配对，agent − 对照）。规则见 SPEC 4.9。
+其余各臂是探索性的，不替换 README 里主臂的那一行。style_win_rate 本轮不跑。
+
+校验器与评估用的是同一套规则：agent 按「违规最少」挑选最终版本，而违规就是从计算 entity_recall、numeral_recall、hallucination_rate 的同一份抽取结果里导出的。这三项的改善在一定程度上是构造使然，不能单独作为事实漂移被治好的证据；规则抓不到的语义漂移 agent 同样看不见。必须连同「没有优化的」那张表一起读。
+
+人工抽查：pending（由仓库所有者进行，不得由模型代填）。
+
+**主臂 − 对照（retrieval-balanced-k2）：agent 直接优化的指标**
+
+| 指标 | 均值差 | 95% 区间 | 结论 |
+|---|---|---|---|
+| entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| numeral_recall | 0.006780 | [0.000000, 0.020339] | 未检出差异 |
+| hallucination_rate | -0.004237 | [-0.012712, 0.000000] | 未检出差异 |
+
+**主臂 − 对照（retrieval-balanced-k2）：agent 没有优化的指标**
+
+| 指标 | 均值差 | 95% 区间 | 结论 |
+|---|---|---|---|
+| profile_gap_per_case | 0.000866 | [-0.002907, 0.006040] | 未检出差异 |
+| copy_ratio | -0.000351 | [-0.001879, 0.000605] | 只报告 |
+| style_distance | -0.000755 | [-0.004095, 0.002256] | 只报告 |
+| length_ratio | -0.000352 | [-0.002395, 0.000947] | 只报告 |
+| cjk_numeral_z | 0.000000 | [0.000000, 0.000000] | 只报告 |
+| profile_gap | -0.005780 | — | 只报点估计 |
+| cjk_numeral_ratio_profile_mean_delta | agent 0.196221，基线 0.196221 | — | 只报告 |
+
+**主臂 − k0（累计）（retrieval-k0）：agent 直接优化的指标**
+
+| 指标 | 均值差 | 95% 区间 | 结论 |
+|---|---|---|---|
+| entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| numeral_recall | 0.037288 | [0.003390, 0.076271] | 改善 |
+| hallucination_rate | -0.014124 | [-0.032486, 0.000000] | 未检出差异 |
+
+**主臂 − k0（累计）（retrieval-k0）：agent 没有优化的指标**
+
+| 指标 | 均值差 | 95% 区间 | 结论 |
+|---|---|---|---|
+| profile_gap_per_case | -0.027863 | [-0.060568, 0.005190] | 未检出差异 |
+| copy_ratio | 0.032409 | [0.018861, 0.047255] | 只报告 |
+| style_distance | 0.006254 | [-0.052955, 0.065653] | 只报告 |
+| length_ratio | 0.028309 | [0.001449, 0.070646] | 只报告 |
+| cjk_numeral_z | 0.201019 | [0.018777, 0.506597] | 只报告 |
+| profile_gap | 0.004691 | — | 只报点估计 |
+| cjk_numeral_ratio_profile_mean_delta | agent 0.196221，基线 -0.004799 | — | 只报告 |
+
+| 组合 | 角色 | style_distance | profile_gap | profile_gap_per_case | entity_recall | numeral_recall | hallucination_rate | copy_ratio | 字数比 | cjk_numeral_ratio 逐维均值差 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| agent2-balanced-k2-followup | 探索性 | 0.928811 | 0.216992 | 0.484911 | 1.000000 | 0.908475 | 0.004237 | 0.745806 | 1.035879 | 0.196221 |
+| agent2-balanced-k2-restate | 探索性 | 0.930080 | 0.210698 | 0.483986 | 1.000000 | 0.911864 | 0.004237 | 0.746911 | 1.035792 | 0.196221 |
+| agent2-balanced-k2-system | 主臂 | 0.928767 | 0.208507 | 0.486128 | 1.000000 | 0.898305 | 0.000000 | 0.741656 | 1.034001 | 0.196221 |
+| agent2-k0-followup | 探索性 | 0.922420 | 0.202212 | 0.513044 | 1.000000 | 0.866667 | 0.014124 | 0.710732 | 1.006560 | -0.004799 |
+| agent2-k0-restate | 探索性 | 0.922918 | 0.196719 | 0.510836 | 1.000000 | 0.892090 | 0.014124 | 0.714413 | 1.007249 | -0.001225 |
+| agent2-k0-system | 探索性 | 0.919296 | 0.201072 | 0.507164 | 1.000000 | 0.900565 | 0.004237 | 0.710848 | 1.007252 | -0.001225 |
+| retrieval-balanced-k2 | 对照 | 0.929522 | 0.214287 | 0.485262 | 1.000000 | 0.891525 | 0.004237 | 0.742007 | 1.034353 | 0.196221 |
+| retrieval-k0 | 对照 | 0.922513 | 0.203816 | 0.513992 | 1.000000 | 0.861017 | 0.014124 | 0.709247 | 1.005692 | -0.004799 |
+
+| 臂 | 1 轮 | 2 轮 | 3 轮 | accepted | max_rounds | recursion_limit | fallback | 选中第 1 轮 | 选中第 2 轮 | 选中第 3 轮 | 未选中 | 第一轮有违规的样本 | 最终输出不同于基线的样本 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| agent2-balanced-k2-followup | 46 | 0 | 13 | 48 | 11 | 0 | 0 | 56 | 0 | 3 | 0 | 13 | 3 |
+| agent2-balanced-k2-restate | 46 | 2 | 11 | 48 | 11 | 0 | 0 | 53 | 6 | 0 | 0 | 13 | 6 |
+| agent2-balanced-k2-system | 46 | 2 | 11 | 48 | 11 | 0 | 0 | 52 | 7 | 0 | 0 | 13 | 7 |
+| agent2-k0-followup | 41 | 1 | 17 | 42 | 17 | 0 | 0 | 56 | 3 | 0 | 0 | 18 | 3 |
+| agent2-k0-restate | 41 | 5 | 13 | 46 | 13 | 0 | 0 | 48 | 11 | 0 | 0 | 18 | 11 |
+| agent2-k0-system | 41 | 6 | 12 | 47 | 12 | 0 | 0 | 46 | 12 | 1 | 0 | 18 | 13 |
+
+| 臂 | 违规类型 | 第一轮条数 | 最终条数 | 修掉 | 新引入 | 第一轮涉及样本 | 最终涉及样本 |
+|---|---|---|---|---|---|---|---|
+| agent2-balanced-k2-followup | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |
+| agent2-balanced-k2-followup | numeral_missing | 11 | 9 | 2 | 0 | 10 | 8 |
+| agent2-balanced-k2-followup | entity_hallucination | 1 | 1 | 0 | 0 | 1 | 1 |
+| agent2-balanced-k2-followup | title | 3 | 3 | 0 | 0 | 2 | 2 |
+| agent2-balanced-k2-restate | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |
+| agent2-balanced-k2-restate | numeral_missing | 11 | 9 | 2 | 0 | 10 | 9 |
+| agent2-balanced-k2-restate | entity_hallucination | 1 | 1 | 0 | 0 | 1 | 1 |
+| agent2-balanced-k2-restate | title | 3 | 2 | 1 | 0 | 2 | 1 |
+| agent2-balanced-k2-system | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |
+| agent2-balanced-k2-system | numeral_missing | 11 | 9 | 2 | 0 | 10 | 9 |
+| agent2-balanced-k2-system | entity_hallucination | 1 | 0 | 1 | 0 | 1 | 0 |
+| agent2-balanced-k2-system | title | 3 | 3 | 0 | 0 | 2 | 2 |
+| agent2-k0-followup | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |
+| agent2-k0-followup | numeral_missing | 14 | 13 | 1 | 0 | 14 | 13 |
+| agent2-k0-followup | entity_hallucination | 3 | 3 | 0 | 0 | 3 | 3 |
+| agent2-k0-followup | title | 3 | 3 | 0 | 0 | 2 | 2 |
+| agent2-k0-restate | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |
+| agent2-k0-restate | numeral_missing | 14 | 10 | 4 | 0 | 14 | 10 |
+| agent2-k0-restate | entity_hallucination | 3 | 3 | 0 | 0 | 3 | 3 |
+| agent2-k0-restate | title | 3 | 2 | 1 | 0 | 2 | 1 |
+| agent2-k0-system | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |
+| agent2-k0-system | numeral_missing | 14 | 10 | 4 | 0 | 14 | 10 |
+| agent2-k0-system | entity_hallucination | 3 | 1 | 2 | 0 | 3 | 1 |
+| agent2-k0-system | title | 3 | 2 | 1 | 0 | 2 | 1 |
+
+兜底样本：无。
+
+**反馈回显**（SPEC 4.8 的事后诊断，不在那一轮的预注册里；4.9 起是预注册的报告项）
+
+修订反馈里用「」引用了缺失的片段。输出若把反馈抄回去，片段就出现在输出里，校验器判为已修复。下表数的是仍含反馈引导语或「片段」的输出；「被防护切过的轮」只在打开回显防护时非零，切掉之后的文本不再计入前几列。
+
+| 臂 | 最终输出改动的样本 | 其中最终输出含反馈回显 | 修订轮含回显 | 第 2 轮含回显 | 被防护切过的轮 |
+|---|---|---|---|---|---|
+| agent2-balanced-k2-followup | 3 | 0 | 0 / 26 | 0 / 13 | 6 |
+| agent2-balanced-k2-restate | 6 | 0 | 0 / 24 | 0 / 13 | 19 |
+| agent2-balanced-k2-system | 7 | 0 | 0 / 24 | 0 / 13 | 0 |
+| agent2-k0-followup | 3 | 0 | 0 / 35 | 0 / 18 | 5 |
+| agent2-k0-restate | 11 | 0 | 0 / 31 | 0 / 18 | 18 |
+| agent2-k0-system | 13 | 0 | 0 / 30 | 0 / 18 | 0 |
+
+**探索臂（各自对第一轮所取的文件，未做多重比较校正）**
+
+| 臂 | 基线 | 指标 | 均值差 | 95% 区间 | 结论 |
+|---|---|---|---|---|---|
+| agent2-balanced-k2-followup | retrieval-balanced-k2 | entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-balanced-k2-followup | retrieval-balanced-k2 | numeral_recall | 0.016949 | [0.000000, 0.042373] | 未检出差异 |
+| agent2-balanced-k2-followup | retrieval-balanced-k2 | hallucination_rate | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-balanced-k2-followup | retrieval-balanced-k2 | profile_gap_per_case | -0.000351 | [-0.005773, 0.004044] | 未检出差异 |
+| agent2-balanced-k2-followup | retrieval-balanced-k2 | copy_ratio | 0.003800 | [0.000000, 0.008472] | 只报告 |
+| agent2-balanced-k2-followup | retrieval-balanced-k2 | style_distance | -0.000711 | [-0.005709, 0.003926] | 只报告 |
+| agent2-balanced-k2-followup | retrieval-balanced-k2 | length_ratio | 0.001526 | [0.000000, 0.003751] | 只报告 |
+| agent2-balanced-k2-followup | retrieval-balanced-k2 | cjk_numeral_z | 0.000000 | [0.000000, 0.000000] | 只报告 |
+| agent2-balanced-k2-restate | retrieval-balanced-k2 | entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-balanced-k2-restate | retrieval-balanced-k2 | numeral_recall | 0.020339 | [0.000000, 0.057627] | 未检出差异 |
+| agent2-balanced-k2-restate | retrieval-balanced-k2 | hallucination_rate | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-balanced-k2-restate | retrieval-balanced-k2 | profile_gap_per_case | -0.001277 | [-0.005208, 0.001425] | 未检出差异 |
+| agent2-balanced-k2-restate | retrieval-balanced-k2 | copy_ratio | 0.004904 | [-0.000293, 0.013940] | 只报告 |
+| agent2-balanced-k2-restate | retrieval-balanced-k2 | style_distance | 0.000557 | [-0.003541, 0.005186] | 只报告 |
+| agent2-balanced-k2-restate | retrieval-balanced-k2 | length_ratio | 0.001439 | [-0.001890, 0.006503] | 只报告 |
+| agent2-balanced-k2-restate | retrieval-balanced-k2 | cjk_numeral_z | 0.000000 | [0.000000, 0.000000] | 只报告 |
+| agent2-k0-followup | retrieval-k0 | entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-k0-followup | retrieval-k0 | numeral_recall | 0.005650 | [0.000000, 0.016949] | 未检出差异 |
+| agent2-k0-followup | retrieval-k0 | hallucination_rate | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-k0-followup | retrieval-k0 | profile_gap_per_case | -0.000948 | [-0.003450, 0.000501] | 未检出差异 |
+| agent2-k0-followup | retrieval-k0 | copy_ratio | 0.001485 | [0.000000, 0.004184] | 只报告 |
+| agent2-k0-followup | retrieval-k0 | style_distance | -0.000093 | [-0.000465, 0.000220] | 只报告 |
+| agent2-k0-followup | retrieval-k0 | length_ratio | 0.000868 | [0.000000, 0.002219] | 只报告 |
+| agent2-k0-followup | retrieval-k0 | cjk_numeral_z | 0.000000 | [0.000000, 0.000000] | 只报告 |
+| agent2-k0-restate | retrieval-k0 | entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-k0-restate | retrieval-k0 | numeral_recall | 0.031073 | [0.005650, 0.064972] | 改善 |
+| agent2-k0-restate | retrieval-k0 | hallucination_rate | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-k0-restate | retrieval-k0 | profile_gap_per_case | -0.003155 | [-0.018030, 0.016419] | 未检出差异 |
+| agent2-k0-restate | retrieval-k0 | copy_ratio | 0.005167 | [0.001595, 0.010067] | 只报告 |
+| agent2-k0-restate | retrieval-k0 | style_distance | 0.000405 | [-0.011892, 0.012086] | 只报告 |
+| agent2-k0-restate | retrieval-k0 | length_ratio | 0.001557 | [-0.001957, 0.006468] | 只报告 |
+| agent2-k0-restate | retrieval-k0 | cjk_numeral_z | 0.003573 | [0.000000, 0.010720] | 只报告 |
+| agent2-k0-system | retrieval-k0 | entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |
+| agent2-k0-system | retrieval-k0 | numeral_recall | 0.039548 | [0.005650, 0.087571] | 改善 |
+| agent2-k0-system | retrieval-k0 | hallucination_rate | -0.009887 | [-0.025424, 0.000000] | 未检出差异 |
+| agent2-k0-system | retrieval-k0 | profile_gap_per_case | -0.006827 | [-0.020387, 0.005220] | 未检出差异 |
+| agent2-k0-system | retrieval-k0 | copy_ratio | 0.001601 | [-0.001373, 0.005137] | 只报告 |
+| agent2-k0-system | retrieval-k0 | style_distance | -0.003217 | [-0.014316, 0.007708] | 只报告 |
+| agent2-k0-system | retrieval-k0 | length_ratio | 0.001560 | [-0.001161, 0.005304] | 只报告 |
+| agent2-k0-system | retrieval-k0 | cjk_numeral_z | 0.003573 | [0.000000, 0.010720] | 只报告 |
+
+| 目标 | 阈值 | 主臂 | 达到 |
+|---|---|---|---|
+| numeral_recall | >= 0.92 | 0.898305 | 未达到 |
+| hallucination_rate | <= 0.005 | 0.000000 | 达到 |
+| profile_gap | < 0.204 | 0.208507 | 未达到 |
+
+PLAN 出口条件（hallucination_rate 明显下降）：未达到（结论：未检出差异）。
+
 ## 2026-10-09 EDT T2.5：agent 评估（Phase 2 出口）
 
 数字取自 `eval/reports/agent-eval.*`、四份 `agent-*.json` 和 `agent-run-manifest.json`，不手算。规则是 SPEC §4.8，在写代码和跑 GPU 之前提交（`1c61ca2`）。生成在 WSL2（2026-10-08T01:48Z，代码 `eab19fd`，sutong-v2，贪心解码，seed 42），评估在 Windows（`--skip-judge`）。主臂是预注册的 `agent-balanced-k2-followup`，其余三臂是**探索性的**。
@@ -37,7 +249,7 @@
 
 ### 坑：restate 的好数字是假的（事后发现）
 
-`agent-balanced-k2-restate` 的 `numeral_recall` 是 0.985876，`agent-k0-restate` 是 0.940113，看起来远好于主臂。核对输出后发现，restate 格式下模型经常在正文后面把修订反馈原样附上，而反馈里用「」引了缺失的数字或称谓。校验器在输出里找到这个片段就判为已修复，正文其实没改。
+`agent-balanced-k2-restate` 的 `numeral_recall` 是 0.985876，`agent-k0-restate` 是 0.940113，看起来远好于主臂。核对输出后发现，restate 格式下模型经常在正文后面把修订反馈原样附上，而反馈里用「」引了缺失的数字或称谓。校验器在输出里找到这个片段就判为已修复。（更正，2026-10-09：把抄回来的部分切掉再校验，`balanced-k2` 臂这 10 条里 8 条正文仍有违规、2 条无违规；`k0` 臂 9 条里 5 条仍有违规、4 条无违规。原先写的「正文其实没改」说得过头了，多数没改，少数是真修了。）
 
 | 臂 | 最终输出改动的样本 | 其中含反馈回显 |
 |---|---|---|

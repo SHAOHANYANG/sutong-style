@@ -1,0 +1,358 @@
+{
+  "adapter": "adapters/sutong-v2/adapter",
+  "arms": {
+    "agent2-balanced-k2-followup": {
+      "baseline": "retrieval-balanced-k2",
+      "cache_hits": 65,
+      "echo_stripped_rounds": 6,
+      "exemplar_source": "balanced-k2",
+      "fallbacks": [],
+      "feedback_format": "followup",
+      "first_round_violation_cases": 13,
+      "model_calls": 20,
+      "n": 59,
+      "output_sha256": "3849790b5ddc13d980ae82a43cb5298bf12c07d172a47677b1e5ac984eb83e4c",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 1395.0,
+          "mean": 1170.2372881355932,
+          "median": 1165.0,
+          "min": 1007.0,
+          "n": 59.0,
+          "q1": 1100.0,
+          "q3": 1210.5,
+          "std": 80.98594541868148
+        },
+        "revision": {
+          "max": 1541.0,
+          "mean": 1413.6,
+          "median": 1410.0,
+          "min": 1255.0,
+          "n": 20.0,
+          "q1": 1386.25,
+          "q3": 1482.25,
+          "std": 80.20124687310042
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 56,
+          "2": 0,
+          "3": 3,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 48,
+          "fallback": 0,
+          "max_rounds": 11,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 46,
+          "2": 0,
+          "3": 13
+        }
+      },
+      "seconds": 154.80479228699997
+    },
+    "agent2-balanced-k2-restate": {
+      "baseline": "retrieval-balanced-k2",
+      "cache_hits": 68,
+      "echo_stripped_rounds": 19,
+      "exemplar_source": "balanced-k2",
+      "fallbacks": [],
+      "feedback_format": "restate",
+      "first_round_violation_cases": 13,
+      "model_calls": 15,
+      "n": 59,
+      "output_sha256": "7324aac6e19513d4792d031c6079e0e7b0348afdb0ddb3a5e1841071d6ba93e0",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 1395.0,
+          "mean": 1170.2372881355932,
+          "median": 1165.0,
+          "min": 1007.0,
+          "n": 59.0,
+          "q1": 1100.0,
+          "q3": 1210.5,
+          "std": 80.98594541868148
+        },
+        "revision": {
+          "max": 1298.0,
+          "mean": 1197.4,
+          "median": 1200.0,
+          "min": 1044.0,
+          "n": 15.0,
+          "q1": 1167.0,
+          "q3": 1244.5,
+          "std": 65.93107512142258
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 53,
+          "2": 6,
+          "3": 0,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 48,
+          "fallback": 0,
+          "max_rounds": 11,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 46,
+          "2": 2,
+          "3": 11
+        }
+      },
+      "seconds": 194.02575879499977
+    },
+    "agent2-balanced-k2-system": {
+      "baseline": "retrieval-balanced-k2",
+      "cache_hits": 70,
+      "echo_stripped_rounds": 0,
+      "exemplar_source": "balanced-k2",
+      "fallbacks": [],
+      "feedback_format": "system",
+      "first_round_violation_cases": 13,
+      "model_calls": 13,
+      "n": 59,
+      "output_sha256": "66d73f0117d980813b5a7c07ef70a41f32cd438f0477130d8bbf425cfe888060",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 1395.0,
+          "mean": 1170.2372881355932,
+          "median": 1165.0,
+          "min": 1007.0,
+          "n": 59.0,
+          "q1": 1100.0,
+          "q3": 1210.5,
+          "std": 80.98594541868148
+        },
+        "revision": {
+          "max": 1292.0,
+          "mean": 1187.5384615384614,
+          "median": 1194.0,
+          "min": 1038.0,
+          "n": 13.0,
+          "q1": 1150.0,
+          "q3": 1233.0,
+          "std": 69.19161285835754
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 52,
+          "2": 7,
+          "3": 0,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 48,
+          "fallback": 0,
+          "max_rounds": 11,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 46,
+          "2": 2,
+          "3": 11
+        }
+      },
+      "seconds": 120.38488661199983
+    },
+    "agent2-k0-followup": {
+      "baseline": "retrieval-k0",
+      "cache_hits": 68,
+      "echo_stripped_rounds": 5,
+      "exemplar_source": "k0",
+      "fallbacks": [],
+      "feedback_format": "followup",
+      "first_round_violation_cases": 18,
+      "model_calls": 26,
+      "n": 59,
+      "output_sha256": "da4a7e5b140961ec60f64afa77514ed59c3f15849e6427a4babc4081d1e3cf59",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 430.0,
+          "mean": 278.45762711864404,
+          "median": 274.0,
+          "min": 213.0,
+          "n": 59.0,
+          "q1": 256.0,
+          "q3": 286.5,
+          "std": 38.09591909898687
+        },
+        "revision": {
+          "max": 754.0,
+          "mean": 542.5769230769231,
+          "median": 525.5,
+          "min": 425.0,
+          "n": 26.0,
+          "q1": 514.25,
+          "q3": 545.25,
+          "std": 74.44418305369831
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 56,
+          "2": 3,
+          "3": 0,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 42,
+          "fallback": 0,
+          "max_rounds": 17,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 41,
+          "2": 1,
+          "3": 17
+        }
+      },
+      "seconds": 222.87276785399962
+    },
+    "agent2-k0-restate": {
+      "baseline": "retrieval-k0",
+      "cache_hits": 71,
+      "echo_stripped_rounds": 18,
+      "exemplar_source": "k0",
+      "fallbacks": [],
+      "feedback_format": "restate",
+      "first_round_violation_cases": 18,
+      "model_calls": 19,
+      "n": 59,
+      "output_sha256": "b65aca2ab9866ea3d7a852f1767b0a28e2533f9668df91e4c9ec9f35d14cbddc",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 430.0,
+          "mean": 278.45762711864404,
+          "median": 274.0,
+          "min": 213.0,
+          "n": 59.0,
+          "q1": 256.0,
+          "q3": 286.5,
+          "std": 38.09591909898687
+        },
+        "revision": {
+          "max": 446.0,
+          "mean": 318.4736842105263,
+          "median": 309.0,
+          "min": 250.0,
+          "n": 19.0,
+          "q1": 300.0,
+          "q3": 325.0,
+          "std": 40.1593777749195
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 48,
+          "2": 11,
+          "3": 0,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 46,
+          "fallback": 0,
+          "max_rounds": 13,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 41,
+          "2": 5,
+          "3": 13
+        }
+      },
+      "seconds": 231.28633031099935
+    },
+    "agent2-k0-system": {
+      "baseline": "retrieval-k0",
+      "cache_hits": 69,
+      "echo_stripped_rounds": 0,
+      "exemplar_source": "k0",
+      "fallbacks": [],
+      "feedback_format": "system",
+      "first_round_violation_cases": 18,
+      "model_calls": 20,
+      "n": 59,
+      "output_sha256": "6ffc3b6ed7b412f84ba9053a9c27d689017ed463b5f5c8aae162422157024c5a",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 430.0,
+          "mean": 278.45762711864404,
+          "median": 274.0,
+          "min": 213.0,
+          "n": 59.0,
+          "q1": 256.0,
+          "q3": 286.5,
+          "std": 38.09591909898687
+        },
+        "revision": {
+          "max": 440.0,
+          "mean": 311.1,
+          "median": 301.5,
+          "min": 244.0,
+          "n": 20.0,
+          "q1": 291.25,
+          "q3": 316.5,
+          "std": 39.59785347717727
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 46,
+          "2": 12,
+          "3": 1,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 47,
+          "fallback": 0,
+          "max_rounds": 12,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 41,
+          "2": 6,
+          "3": 12
+        }
+      },
+      "seconds": 207.4929647500005
+    }
+  },
+  "baselines": {
+    "retrieval-balanced-k2": {
+      "path": "corpus/generations/retrieval-balanced-k2.jsonl",
+      "sha256": "72c18b989f06b0cd46be7d40edbbe46654589be8a3f218c06a2ba7593d0c5dee"
+    },
+    "retrieval-k0": {
+      "path": "corpus/generations/retrieval-k0.jsonl",
+      "sha256": "1e5db348c11a99f52d01fd8e8203f8a1db24187a6781e4748780459d95a1053f"
+    }
+  },
+  "commit": "d4f496de1b9b88bfed876e7530cf5fb741eee747",
+  "decoding": "greedy",
+  "echo_guard": true,
+  "experiment": "v2",
+  "max_generations": 3,
+  "max_new_tokens": 768,
+  "max_seq_length": 4096,
+  "model": "sutong-v2",
+  "plan_sha256": "99a1f740141602bd0e186865c75b73bf63ee0de00c1a4ec66735d729b66465ec",
+  "primary_arm": "agent2-balanced-k2-system",
+  "re_retrieve_score_threshold": null,
+  "scorer": {
+    "alpha": 10.0,
+    "kind": "predictor_b",
+    "n_train": 743
+  },
+  "seed": 42,
+  "spec": "4.9",
+  "timestamp": "2026-10-09T18:28:26Z"
+}

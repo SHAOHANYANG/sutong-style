@@ -291,7 +291,7 @@ def render_markdown(summary: Mapping[str, object]) -> str:
     lines = [
         f"主臂是 {primary['arm']}，对照是 {CONTROL_KEY}（同样 59 条，逐条配对，agent − 对照）。"
         f"规则见 SPEC {summary['spec']}。",
-        "其余三臂是探索性的，不替换 README 的 agent 行。style_win_rate 本轮不跑。",
+        "其余各臂是探索性的，不替换 README 里主臂的那一行。style_win_rate 本轮不跑。",
         "",
         SAME_RULES_NOTE,
         "",
