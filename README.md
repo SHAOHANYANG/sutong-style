@@ -168,6 +168,16 @@ uv pip install --python ~/venvs/sutong/bin/python -c /tmp/sutong-freeze.txt \
 uv run python -m scripts.eval_agent
 ```
 
+第二轮实验（[SPEC 4.9](docs/SPEC.md#49-agent-第二轮回显防护与-system-反馈格式预注册)：六个臂，打开回显防护，多一种 system 反馈格式）在两条命令后面各加 `--experiment v2`，产物的前缀是 `agent2-`：
+
+```bash
+~/venvs/sutong/bin/python -m scripts.run_agent_eval --experiment v2 --adapter adapters/sutong-v2/adapter
+```
+
+```bash
+uv run python -m scripts.eval_agent --experiment v2
+```
+
 `--dry-run` 不加载模型，只核对计划和两个基线文件，并打印每个臂第一轮就有违规的样本数（只有这些样本需要真实生成）。第一轮不重新解码：它的 prompt 和 k 扫描里对应组的逐字相同，输出按 `prompt_sha256` 从 `retrieval-balanced-k2.jsonl` 和 `retrieval-k0.jsonl` 里取，找不到对应的 sha 就在加载模型之前报错退出。修订轮的 prompt 超出 4096 − 768 的预算同样直接报错，不截断。中断后重跑同一条命令会跳过已写完的样本。
 
 生成文件是 `corpus/generations/agent-*.jsonl`，含正文，不提交。清单在 `eval/reports/agent-run-manifest.json`。评估回到 Windows 跑，写出四份 `eval/reports/agent-*.json` 和汇总 `agent-eval.json` / `agent-eval.md`。汇总把指标分成 agent 直接优化的和没有优化的两张表：校验器与评估用的是同一套规则，前一张表的改善有一部分是构造使然，必须连同后一张一起读。

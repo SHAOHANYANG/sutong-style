@@ -9,7 +9,7 @@ from typing import Protocol
 
 import structlog
 
-from agent.prompts import make_revision_message_builder
+from agent.prompts import make_revision_message_builder, strip_feedback_echo
 from agent.state import (
     MAX_GENERATIONS,
     AgentState,
@@ -66,6 +66,8 @@ def default_message_builder(state: AgentState) -> list[dict[str, str]]:
         return make_revision_message_builder("restate")(state)
     if raw == "followup":
         return make_revision_message_builder("followup")(state)
+    if raw == "system":
+        return make_revision_message_builder("system")(state)
     raise ValueError(f"未知反馈格式: {raw}")
 
 
@@ -133,7 +135,12 @@ def make_generate(
                 "last_output_sha256": "",
                 "last_output_chars": 0,
                 "last_generate_error_type": error_type,
+                "last_echo_chars": 0,
             }
+        removed = 0
+        if state.get("echo_guard"):
+            # The feedback this round answered was built from last_violations.
+            text, removed = strip_feedback_echo(text, state.get("last_violations") or [])
         return {
             "candidates": [*list(state.get("candidates") or []), text],
             "iter": iterations + 1,
@@ -141,6 +148,8 @@ def make_generate(
             "last_output_sha256": sha256_text(text),
             "last_output_chars": len(text),
             "last_generate_error_type": None,
+            "last_echo_chars": removed,
+            "echo_chars": [*list(state.get("echo_chars") or []), removed],
         }
 
     return generate

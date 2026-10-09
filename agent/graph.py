@@ -112,6 +112,7 @@ def _payload_for(node_name: str, before: AgentState, after: AgentState) -> dict[
             "prompt_sha256": after.get("last_prompt_sha256") or "",
             "output_sha256": after.get("last_output_sha256") or "",
             "output_chars": int(after.get("last_output_chars") or 0),
+            "echo_stripped_chars": int(after.get("last_echo_chars") or 0),
             "raised": error_type is not None,
             "error_type": error_type,
         }
@@ -141,6 +142,9 @@ def build_result(state: AgentState, vernacular: str) -> AgentResult:
     violation_counts = list(state.get("violation_counts") or [])
     violations_history = list(state.get("violations_history") or [])
     scores = list(state.get("scores") or [])
+    echo_chars = list(state.get("echo_chars") or [])
+    while len(echo_chars) < len(candidates):
+        echo_chars.append(0)
     while len(violation_counts) < len(candidates):
         violation_counts.append(0)
     while len(scores) < len(candidates):
@@ -155,6 +159,7 @@ def build_result(state: AgentState, vernacular: str) -> AgentResult:
             violation_count=violation_counts[index],
             violations=list(violations_history[index]),
             score=scores[index],
+            echo_stripped_chars=echo_chars[index],
         )
         for index, text in enumerate(candidates)
     ]
@@ -340,6 +345,8 @@ def run_agent(
         "max_generations": settings.max_generations,
         "score_threshold": settings.re_retrieve_score_threshold,
         "feedback_format": settings.feedback_format,
+        "echo_guard": settings.echo_guard,
+        "echo_chars": [],
         "trace": [],
         "halt": False,
     }

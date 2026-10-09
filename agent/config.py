@@ -14,3 +14,5 @@ class AgentConfig(BaseModel):
     max_generations: int = Field(default=MAX_GENERATIONS, ge=1)
     re_retrieve_score_threshold: float | None = None
     feedback_format: FeedbackFormat = "followup"
+    # Cut copied-back feedback before verification (SPEC 4.9). Off keeps SPEC 4.8 runs as they were.
+    echo_guard: bool = False

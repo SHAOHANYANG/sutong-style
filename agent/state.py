@@ -52,6 +52,7 @@ class RoundRecord(BaseModel):
     violation_count: int
     violations: list[Violation] = Field(default_factory=list)
     score: float
+    echo_stripped_chars: int = 0
 
 
 class AgentResult(BaseModel):
@@ -84,6 +85,9 @@ class AgentState(TypedDict, total=False):
     last_output_sha256: str
     last_output_chars: int
     last_generate_error_type: str | None
+    last_echo_chars: int
+    echo_chars: list[int]
+    echo_guard: bool
     iter: int
     re_retrieved: bool
     max_generations: int

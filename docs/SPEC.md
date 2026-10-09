@@ -789,7 +789,7 @@ route ─┬─ "accept"      → END
 | 节点 | payload |
 |---|---|
 | retrieve | `exemplar_ids`（与 prompt 中范例顺序一致）、`is_re_retrieve` |
-| generate | `round`、`feedback_format`、`prompt_sha256`、`output_sha256`、`output_chars`、`raised`、`error_type` |
+| generate | `round`、`feedback_format`、`prompt_sha256`、`output_sha256`、`output_chars`、`echo_stripped_chars`（回显防护切掉的字数，防护关闭时恒为 0，见 §4.9）、`raised`、`error_type` |
 | verify | `violation_count`、`violations[{kind, expected, actual}]` |
 | score | `score` |
 | route | `decision`（`accept` / `revise` / `re_retrieve`） |
@@ -810,6 +810,8 @@ payload **不放整段正文**（输入、输出、范例正文、prompt 全文�
 两种消息格式，由 `agent/config.py` 的 `feedback_format` 选择，默认 `followup`；T2.5 实测比较：
 - **followup**：在第一轮 `build_prompt` 之后追加 assistant（上一版输出）+ user（引导语 + 逐条）。多轮修订只带最近一版输出及其违规。
 - **restate**：消息结构仍是一问一答；最后一轮 user 为「输入白话 + 空行 + 引导语 + 逐条」，不出现上一版输出。
+
+- **system**（2026-10-09 增补，定义与理由见 §4.9）：反馈接在 system 消息后面，user 轮不变。
 
 无论哪种，第一轮消息必须与 `retrieval.prompt.build_prompt` 逐字相同；范例段原样保留。
 

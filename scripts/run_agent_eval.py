@@ -1,4 +1,4 @@
-"""Run the four pre-registered agent arms on the eval split (SPEC 4.8).
+"""Run the pre-registered agent arms on the eval split (SPEC 4.8, and 4.9 with v2).
 
 The model is loaded once. Round one is never decoded again: its prompt is the
 same list the k sweep already decoded, so the output is looked up by
@@ -60,9 +60,38 @@ LOGGER = structlog.get_logger()
 PIPELINE = "agent"
 # Exemplar source name -> (fusion config, k) of the sweep group round one comes from.
 SOURCES: dict[str, tuple[str | None, int]] = {"balanced-k2": ("balanced", 2), "k0": (None, 0)}
-FEEDBACK_FORMATS: tuple[FeedbackFormat, ...] = ("followup", "restate")
-PRIMARY_ARM = "agent-balanced-k2-followup"
 TERMINATIONS = ("accepted", "max_rounds", "recursion_limit", "fallback")
+
+
+class Experiment(BaseModel):
+    """One pre-registered run: its arms, its primary arm, and whether the guard is on."""
+
+    name: str
+    prefix: str
+    feedback_formats: tuple[FeedbackFormat, ...]
+    primary_arm: str
+    echo_guard: bool
+    spec: str
+
+
+V1 = Experiment(
+    name="v1",
+    prefix="agent",
+    feedback_formats=("followup", "restate"),
+    primary_arm="agent-balanced-k2-followup",
+    echo_guard=False,
+    spec="4.8",
+)
+V2 = Experiment(
+    name="v2",
+    prefix="agent2",
+    feedback_formats=("followup", "restate", "system"),
+    primary_arm="agent2-balanced-k2-system",
+    echo_guard=True,
+    spec="4.9",
+)
+EXPERIMENTS = {"v1": V1, "v2": V2}
+PRIMARY_ARM = V1.primary_arm
 
 
 class Arm(BaseModel):
@@ -70,10 +99,11 @@ class Arm(BaseModel):
 
     source: str
     feedback_format: FeedbackFormat
+    prefix: str = "agent"
 
     @property
     def key(self) -> str:
-        return f"agent-{self.source}-{self.feedback_format}"
+        return f"{self.prefix}-{self.source}-{self.feedback_format}"
 
     @property
     def fusion_config(self) -> str | None:
@@ -154,12 +184,12 @@ class CachedGenerator:
         return output
 
 
-def arms() -> list[Arm]:
-    """The primary arm first, then the three exploratory ones."""
+def arms(experiment: Experiment = V1) -> list[Arm]:
+    """Every exemplar source crossed with every feedback format of the experiment."""
     return [
-        Arm(source=source, feedback_format=feedback_format)
+        Arm(source=source, feedback_format=feedback_format, prefix=experiment.prefix)
         for source in SOURCES
-        for feedback_format in FEEDBACK_FORMATS
+        for feedback_format in experiment.feedback_formats
     ]
 
 
@@ -221,6 +251,16 @@ def first_round_violation_cases(rows: Sequence[Mapping[str, object]]) -> int:
     return sum(1 for row in rows if _rounds(row) and _violation_keys(_rounds(row)[0]))
 
 
+def echo_stripped_rounds(rows: Sequence[Mapping[str, object]]) -> int:
+    """Rounds whose output had copied-back feedback cut by the guard (SPEC 4.9)."""
+    return sum(
+        1
+        for row in rows
+        for record in _rounds(row)
+        if isinstance(record.get("echo_stripped_chars"), int) and record["echo_stripped_chars"] != 0
+    )
+
+
 def run_agent_eval(
     *,
     plans: Mapping[str, Mapping[str, PlanQuery]],
@@ -241,6 +281,7 @@ def run_agent_eval(
     max_new_tokens: int = MAX_NEW_TOKENS,
     max_seq_length: int = MAX_SEQ_LENGTH,
     timestamp: str | None = None,
+    experiment: Experiment = V1,
 ) -> dict[str, object]:
     """Write four jsonl files and the manifest. Finished cases are skipped on restart."""
     queries = select(pairs, "eval")
@@ -248,7 +289,10 @@ def run_agent_eval(
         raise SystemExit("eval 为空，无法运行 agent")
     by_id = {row.id: row for row in pairs}
     baselines = load_baselines(baselines_dir)
-    prepared = {arm.key: check_first_round(arm, queries, plans, by_id, baselines) for arm in arms()}
+    prepared = {
+        arm.key: check_first_round(arm, queries, plans, by_id, baselines)
+        for arm in arms(experiment)
+    }
     cache = first_round_cache(baselines)
     cached = CachedGenerator(
         generator,
@@ -259,7 +303,7 @@ def run_agent_eval(
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     records: dict[str, object] = {}
-    for arm in arms():
+    for arm in arms(experiment):
         path = output_dir / f"{arm.key}.jsonl"
         _run_arm(
             arm=arm,
@@ -273,6 +317,7 @@ def run_agent_eval(
             path=path,
             model=model,
             seed=seed,
+            echo_guard=experiment.echo_guard,
         )
         records[arm.key] = _arm_record(arm, path, baselines[arm.baseline_key])
     manifest: dict[str, object] = {
@@ -287,15 +332,18 @@ def run_agent_eval(
         },
         "commit": commit,
         "decoding": "greedy",
+        "echo_guard": experiment.echo_guard,
+        "experiment": experiment.name,
         "max_generations": AgentConfig().max_generations,
         "max_new_tokens": max_new_tokens,
         "max_seq_length": max_seq_length,
         "model": model,
         "plan_sha256": plan_sha256,
-        "primary_arm": PRIMARY_ARM,
+        "primary_arm": experiment.primary_arm,
         "re_retrieve_score_threshold": AgentConfig().re_retrieve_score_threshold,
         "scorer": dict(scorer_info or {}),
         "seed": seed,
+        "spec": experiment.spec,
         "timestamp": timestamp or datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -313,6 +361,7 @@ def dry_run(
     pairs: Sequence[Pair],
     baselines_dir: Path,
     verifier: Verifier,
+    experiment: Experiment = V1,
 ) -> dict[str, object]:
     """Check the plan, the pairs and both sweep files; count the cases that need the model."""
     queries = select(pairs, "eval")
@@ -323,7 +372,7 @@ def dry_run(
     rows_by_arm: dict[str, int] = {}
     needing: dict[str, int] = {}
     by_kind: dict[str, dict[str, int]] = {}
-    for arm in arms():
+    for arm in arms(experiment):
         check_first_round(arm, queries, plans, by_id, baselines)
         rows_by_arm[arm.key] = len(queries)
         kinds: Counter[str] = Counter({kind: 0 for kind in KIND_ORDER})
@@ -410,7 +459,13 @@ def check_first_round(
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="按预注册跑 agent 的四个臂（SPEC 4.8）")
+    parser = argparse.ArgumentParser(description="按预注册跑 agent 的各个臂（SPEC 4.8 / 4.9）")
+    parser.add_argument(
+        "--experiment",
+        choices=sorted(EXPERIMENTS),
+        default="v1",
+        help="v1 是 SPEC 4.8 的四个臂；v2 是 SPEC 4.9 的六个臂，打开回显防护",
+    )
     parser.add_argument("--plan", type=Path, default=Path("eval/reports/retrieval-plan.json"))
     parser.add_argument("--pairs", type=Path, default=Path("corpus/pairs.jsonl"))
     parser.add_argument("--config", type=Path, default=Path("eval/configs/eval59.yaml"))
@@ -420,7 +475,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path("eval/reports/agent-run-manifest.json"),
+        default=None,
+        help="默认 eval/reports/<前缀>-run-manifest.json",
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-seq-length", type=int, default=MAX_SEQ_LENGTH)
@@ -442,12 +498,20 @@ def main(
 ) -> int:
     structlog.configure(processors=[structlog.processors.JSONRenderer(ensure_ascii=False)])
     args = parse_args(argv)
+    experiment = EXPERIMENTS[args.experiment]
+    manifest_path = args.manifest or Path(f"eval/reports/{experiment.prefix}-run-manifest.json")
     pairs = load_pairs(args.pairs)
     plans = load_plan(args.plan)
     config = load_config(args.config)
     verifier = FidelityVerifier(load_gazetteer(Path(config.gazetteer)))
     if args.dry_run:
-        dry_run(plans=plans, pairs=pairs, baselines_dir=args.baselines_dir, verifier=verifier)
+        dry_run(
+            plans=plans,
+            pairs=pairs,
+            baselines_dir=args.baselines_dir,
+            verifier=verifier,
+            experiment=experiment,
+        )
         return 0
     scorer_info: dict[str, object] = {"kind": "injected"}
     if scorer is None:
@@ -462,7 +526,13 @@ def main(
         scorer = PredictorScorer(reference, predictor)
         scorer_info = {"alpha": predictor.alpha, "kind": "predictor_b", "n_train": len(train)}
     # Fail on a missing first-round prompt before the model is loaded.
-    dry_run(plans=plans, pairs=pairs, baselines_dir=args.baselines_dir, verifier=verifier)
+    dry_run(
+        plans=plans,
+        pairs=pairs,
+        baselines_dir=args.baselines_dir,
+        verifier=verifier,
+        experiment=experiment,
+    )
     if generator is None or counter is None:
         if not args.adapter.exists():
             raise SystemExit(f"adapter 不存在: {args.adapter}")
@@ -478,7 +548,7 @@ def main(
         verifier=verifier,
         scorer=scorer,
         output_dir=args.output_dir,
-        manifest_path=args.manifest,
+        manifest_path=manifest_path,
         adapter=str(args.adapter),
         model=model_name(args.adapter),
         seed=args.seed,
@@ -487,6 +557,7 @@ def main(
         scorer_info=scorer_info,
         max_new_tokens=args.max_new_tokens,
         max_seq_length=args.max_seq_length,
+        experiment=experiment,
     )
     return 0
 
@@ -504,11 +575,12 @@ def _run_arm(
     path: Path,
     model: str,
     seed: int,
+    echo_guard: bool,
 ) -> None:
     existing = _load_existing(path, prepared, arm)
     exemplars = {query.id: _exemplars(prepared[query.id], by_id) for query in queries}
     retriever = PlanRetriever({query.vernacular: exemplars[query.id] for query in queries})
-    config = AgentConfig(feedback_format=arm.feedback_format)
+    config = AgentConfig(feedback_format=arm.feedback_format, echo_guard=echo_guard)
     for index, query in enumerate(queries, start=1):
         if query.id not in existing:
             generator.begin(query.id)
@@ -589,6 +661,7 @@ def _arm_record(
     return {
         "baseline": arm.baseline_key,
         "cache_hits": sum(_int(row, "cache_hits") for row in rows),
+        "echo_stripped_rounds": echo_stripped_rounds(rows),
         "exemplar_source": arm.source,
         "fallbacks": [
             {"fallback_kind": row.get("fallback_kind"), "id": row["id"]}

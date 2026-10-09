@@ -9,7 +9,7 @@ from agent.state import AgentState
 from eval.fidelity import Violation, ViolationKind
 from retrieval.prompt import Exemplar, build_prompt
 
-FeedbackFormat = Literal["followup", "restate"]
+FeedbackFormat = Literal["followup", "restate", "system"]
 
 KIND_ORDER: tuple[ViolationKind, ...] = (
     "entity_missing",
@@ -20,6 +20,8 @@ KIND_ORDER: tuple[ViolationKind, ...] = (
 
 FOLLOWUP_LEAD = "上一版存在以下问题，请按条修正后重写，其余部分尽量保留："
 RESTATE_LEAD = "请按下列要求改写这段输入，其余内容尽量保留："
+SYSTEM_LEAD = "改写时必须满足下列要求："
+LEADS = (FOLLOWUP_LEAD, RESTATE_LEAD, SYSTEM_LEAD)
 
 
 def _quote(text: str) -> str:
@@ -113,7 +115,44 @@ def build_revision_messages(
     if feedback_format == "restate":
         body = vernacular + "\n\n" + feedback_block(violations, lead=RESTATE_LEAD)
         return [*base[:-1], {"role": "user", "content": body}]
+    if feedback_format == "system":
+        # The model treats every user turn as text to rewrite, so the instruction
+        # goes where training put the only instruction it ever saw.
+        block = feedback_block(violations, lead=SYSTEM_LEAD)
+        system = {"role": "system", "content": base[0]["content"] + "\n\n" + block}
+        return [system, *base[1:]]
     raise ValueError(f"未知反馈格式: {feedback_format}")
+
+
+def strip_feedback_echo(text: str, violations: Sequence[Violation]) -> tuple[str, int]:
+    """Cut feedback the model copied back. Returns the kept text and the characters removed.
+
+    The feedback quotes each missing fragment, so a copied instruction makes the
+    fragment appear in the output and the verifier pass. The cut starts at the first
+    verbatim lead, or at the line holding a quoted fragment of the feedback just sent
+    (one line earlier when that line ends with a colon: a reworded lead).
+    """
+    cuts = [text.index(lead) for lead in LEADS if lead in text]
+    fragments = {
+        _quote(fragment)
+        for item in violations
+        for fragment in (item.expected, item.actual)
+        if fragment
+    }
+    lines = text.split("\n")
+    offset = 0
+    previous_start = 0
+    for index, line in enumerate(lines):
+        if any(fragment in line for fragment in fragments):
+            reworded_lead = index > 0 and lines[index - 1].rstrip().endswith(("：", ":"))
+            cuts.append(previous_start if reworded_lead else offset)
+            break
+        previous_start = offset
+        offset += len(line) + 1
+    if not cuts:
+        return text, 0
+    kept = text[: min(cuts)].rstrip()
+    return kept, len(text) - len(kept)
 
 
 def make_revision_message_builder(

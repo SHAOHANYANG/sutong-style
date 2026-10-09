@@ -1,4 +1,4 @@
-"""Score the four agent files offline and write the pre-registered comparison (SPEC 4.8).
+"""Score the agent files offline and write the pre-registered comparison (SPEC 4.8 / 4.9).
 
 --skip-judge is the only path: this module never builds a judge client and never
 reads .env. The verifier inside the loop and the three fidelity metrics here come
@@ -16,7 +16,7 @@ from pathlib import Path
 
 import structlog
 
-from agent.prompts import FOLLOWUP_LEAD, RESTATE_LEAD
+from agent.prompts import LEADS
 from eval.run_eval import evaluate, load_config, load_style_reference, output_hash
 from scripts.eval_sweep import (
     TARGETS,
@@ -30,10 +30,13 @@ from scripts.eval_sweep import (
     status_targets,
 )
 from scripts.run_agent_eval import (
-    PRIMARY_ARM,
+    EXPERIMENTS,
     TERMINATIONS,
+    V1,
     Arm,
+    Experiment,
     arms,
+    echo_stripped_rounds,
     first_round_violation_cases,
     round_distribution,
     violation_transitions,
@@ -131,10 +134,8 @@ def feedback_echo(rows: Sequence[Mapping[str, object]]) -> dict[str, object]:
         for index, record in enumerate(rounds):
             if index > 0:
                 text = str(record["output"])
-                echoed = (
-                    FOLLOWUP_LEAD in text
-                    or RESTATE_LEAD in text
-                    or any(f"「{fragment}」" in text for fragment in fragments)
+                echoed = any(lead in text for lead in LEADS) or any(
+                    f"「{fragment}」" in text for fragment in fragments
                 )
                 revision_rounds += int(echoed)
                 revision_rounds_total += 1
@@ -170,13 +171,14 @@ def exit_condition(comparison: Mapping[str, object]) -> dict[str, object]:
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="离线评估四个 agent 臂并写汇总")
+    parser = argparse.ArgumentParser(description="离线评估 agent 各臂并写汇总")
+    parser.add_argument("--experiment", choices=sorted(EXPERIMENTS), default="v1")
     parser.add_argument("--generations-dir", type=Path, default=Path("corpus/generations"))
     parser.add_argument("--pairs", type=Path, default=Path("corpus/pairs.jsonl"))
     parser.add_argument("--config", type=Path, default=Path("eval/configs/eval59.yaml"))
     parser.add_argument("--reports-dir", type=Path, default=Path("eval/reports"))
-    parser.add_argument("--summary", type=Path, default=Path("eval/reports/agent-eval.json"))
-    parser.add_argument("--markdown", type=Path, default=Path("eval/reports/agent-eval.md"))
+    parser.add_argument("--summary", type=Path, default=None)
+    parser.add_argument("--markdown", type=Path, default=None)
     parser.add_argument("--cache-dir", type=Path, default=Path("eval/.judge_cache"))
     return parser.parse_args(None if argv is None else list(argv))
 
@@ -184,11 +186,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None, *, timestamp: str | None = None) -> dict[str, object]:
     structlog.configure(processors=[structlog.processors.JSONRenderer(ensure_ascii=False)])
     args = parse_args(argv)
+    experiment = EXPERIMENTS[args.experiment]
+    summary_path = args.summary or args.reports_dir / f"{experiment.prefix}-eval.json"
+    markdown_path = args.markdown or args.reports_dir / f"{experiment.prefix}-eval.md"
     config = load_config(args.config).model_copy(update={"pipeline": "agent"})
     args.reports_dir.mkdir(parents=True, exist_ok=True)
     reports: dict[str, dict[str, object]] = {}
     rows: dict[str, list[dict[str, object]]] = {}
-    for arm in arms():
+    for arm in arms(experiment):
         path = args.generations_dir / f"{arm.key}.jsonl"
         if not path.is_file():
             raise SystemExit(f"生成文件不存在: {path}")
@@ -212,11 +217,12 @@ def main(argv: Sequence[str] | None = None, *, timestamp: str | None = None) -> 
         pairs=load_pairs(args.pairs),
         reference=load_style_reference(config),
         timestamp=timestamp or datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        experiment=experiment,
     )
     text = json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    args.summary.write_text(text, encoding="utf-8")
-    args.markdown.write_text(str(summary["changelog_markdown"]), encoding="utf-8")
-    LOGGER.info("agent_eval_written", summary=str(args.summary), arms=len(arms()))
+    summary_path.write_text(text, encoding="utf-8")
+    markdown_path.write_text(str(summary["changelog_markdown"]), encoding="utf-8")
+    LOGGER.info("agent_eval_written", summary=str(summary_path), arms=len(arms(experiment)))
     return summary
 
 
@@ -227,25 +233,29 @@ def assemble_summary(
     pairs: Sequence[Pair],
     reference: StyleReference,
     timestamp: str,
+    experiment: Experiment = V1,
 ) -> dict[str, object]:
-    """Four arms, the primary paired intervals in two tables, rounds and violation moves."""
+    """Every arm, the primary paired intervals in two tables, rounds and violation moves."""
     by_id = {row.id: row for row in pairs}
     order = _case_order(reports[CONTROL_KEY])
+    primary_arm = experiment.primary_arm
     scored: dict[str, dict[str, object]] = {}
-    for key in (*(arm.key for arm in arms()), CONTROL_KEY, CUMULATIVE_KEY):
+    for key in (*(arm.key for arm in arms(experiment)), CONTROL_KEY, CUMULATIVE_KEY):
         _check_outputs(key, reports[key], rows[key])
         if _case_order(reports[key]) != order:
             raise SystemExit(f"样本顺序与对照不一致: {key}")
         scored[key] = _with_extras(reports[key], rows[key], by_id, reference)
     arm_blocks: list[dict[str, object]] = []
     exploratory: dict[str, object] = {}
-    for arm in arms():
+    for arm in arms(experiment):
         _check_first_round(arm, rows[arm.key], rows[arm.baseline_key])
         comparison = compare(scored[arm.key], scored[arm.baseline_key], order)
-        arm_blocks.append(_arm_block(arm, scored[arm.key], rows[arm.key], comparison))
-        if arm.key != PRIMARY_ARM:
+        block = _arm_block(arm, scored[arm.key], rows[arm.key], comparison)
+        block["role"] = "主臂" if arm.key == primary_arm else "探索性"
+        arm_blocks.append(block)
+        if arm.key != primary_arm:
             exploratory[arm.key] = {"baseline": arm.baseline_key, **comparison}
-    vs_control = compare(scored[PRIMARY_ARM], scored[CONTROL_KEY], order)
+    vs_control = compare(scored[primary_arm], scored[CONTROL_KEY], order)
     summary: dict[str, object] = {
         "arms": arm_blocks,
         "baselines": [
@@ -254,18 +264,20 @@ def assemble_summary(
         ],
         "changelog_markdown": "",
         "exit_condition": exit_condition(vs_control),
+        "experiment": experiment.name,
         "exploratory": exploratory,
         "human_spot_check": "pending",
         "primary": {
-            "arm": PRIMARY_ARM,
+            "arm": primary_arm,
             "vs_control": {"baseline": CONTROL_KEY, **vs_control},
             "vs_k0": {
                 "baseline": CUMULATIVE_KEY,
-                **compare(scored[PRIMARY_ARM], scored[CUMULATIVE_KEY], order),
+                **compare(scored[primary_arm], scored[CUMULATIVE_KEY], order),
             },
         },
         "same_rules_note": SAME_RULES_NOTE,
-        "targets": status_targets(_aggregate(reports[PRIMARY_ARM])),
+        "spec": experiment.spec,
+        "targets": status_targets(_aggregate(reports[primary_arm])),
         "timestamp": timestamp,
     }
     summary["changelog_markdown"] = render_markdown(summary)
@@ -277,7 +289,8 @@ def render_markdown(summary: Mapping[str, object]) -> str:
     primary = _obj(summary["primary"])
     blocks = [_obj(item) for item in _list(summary["arms"])]
     lines = [
-        f"主臂是 {PRIMARY_ARM}，对照是 {CONTROL_KEY}（同样 59 条，逐条配对，agent − 对照）。",
+        f"主臂是 {primary['arm']}，对照是 {CONTROL_KEY}（同样 59 条，逐条配对，agent − 对照）。"
+        f"规则见 SPEC {summary['spec']}。",
         "其余三臂是探索性的，不替换 README 的 agent 行。style_win_rate 本轮不跑。",
         "",
         SAME_RULES_NOTE,
@@ -351,13 +364,15 @@ def render_markdown(summary: Mapping[str, object]) -> str:
     lines.extend(
         [
             "",
-            "**事后诊断（不在 SPEC 4.8 的预注册里，看到结果之后加的）：反馈回显**",
+            "**反馈回显**（SPEC 4.8 的事后诊断，不在那一轮的预注册里；4.9 起是预注册的报告项）",
             "",
-            "修订反馈里用「」引用了缺失的片段。输出若把反馈原样抄回去，片段就出现在输出里，"
-            "校验器判为已修复，正文其实没改。下表数的是含反馈引导语或「片段」的输出。",
+            "修订反馈里用「」引用了缺失的片段。输出若把反馈抄回去，片段就出现在输出里，"
+            "校验器判为已修复。下表数的是仍含反馈引导语或「片段」的输出；"
+            "「被防护切过的轮」只在打开回显防护时非零，切掉之后的文本不再计入前几列。",
             "",
-            "| 臂 | 最终输出改动的样本 | 其中最终输出含反馈回显 | 修订轮含回显 | 第 2 轮含回显 |",
-            "|---|---|---|---|---|",
+            "| 臂 | 最终输出改动的样本 | 其中最终输出含反馈回显 | 修订轮含回显 "
+            "| 第 2 轮含回显 | 被防护切过的轮 |",
+            "|---|---|---|---|---|---|",
         ]
     )
     for block in blocks:
@@ -367,7 +382,8 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         lines.append(
             f"| {block['name']} | {revised} | {echo['final_cases']} "
             f"| {echo['revision_rounds']} / {echo['revision_rounds_total']} "
-            f"| {echo['second_round']} / {echo['second_round_total']} |"
+            f"| {echo['second_round']} / {echo['second_round_total']} "
+            f"| {block['echo_stripped_rounds']} |"
         )
     lines.extend(["", "**探索臂（各自对第一轮所取的文件，未做多重比较校正）**", ""])
     lines.extend(["| 臂 | 基线 | 指标 | 均值差 | 95% 区间 | 结论 |", "|---|---|---|---|---|---|"])
@@ -447,6 +463,7 @@ def _arm_block(
         "aggregate": _aggregate_block(report),
         "baseline": arm.baseline_key,
         "changed_cases": comparison["changed_cases"],
+        "echo_stripped_rounds": echo_stripped_rounds(rows),
         "exemplar_source": arm.source,
         "fallbacks": [
             {"fallback_kind": row.get("fallback_kind"), "id": row["id"]}
@@ -457,7 +474,6 @@ def _arm_block(
         "feedback_format": arm.feedback_format,
         "first_round_violation_cases": first_round_violation_cases(rows),
         "name": arm.key,
-        "role": "主臂" if arm.key == PRIMARY_ARM else "探索性",
         "rounds": round_distribution(rows),
         "violation_transitions": violation_transitions(rows),
     }
