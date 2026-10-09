@@ -18,6 +18,7 @@ from agent.prompts import make_revision_message_builder
 from agent.state import RECURSION_LIMIT, AgentResult, AgentState
 from api.deps import (
     StyleConfig,
+    get_agent_config,
     get_generator,
     get_retriever,
     get_scorer,
@@ -73,10 +74,11 @@ def _run_streaming_graph(
     generator: Generator,
     verifier: Verifier,
     scorer: Scorer,
+    base_config: AgentConfig,
     emit: Callable[[str, str], None],
 ) -> AgentResult:
     """Run LangGraph synchronously, emitting each completed node immediately."""
-    settings = AgentConfig(max_generations=request.max_iter)
+    settings = base_config.model_copy(update={"max_generations": request.max_iter})
     compiled, box = build_graph(
         retriever=retriever,
         generator=_RequestGenerator(generator, request.seed),
@@ -125,6 +127,7 @@ async def _event_stream(
     generator: Generator,
     verifier: Verifier,
     scorer: Scorer,
+    base_config: AgentConfig,
 ) -> AsyncIterator[str]:
     events: queue.Queue[tuple[str, str] | None] = queue.Queue()
 
@@ -139,6 +142,7 @@ async def _event_stream(
                 generator=generator,
                 verifier=verifier,
                 scorer=scorer,
+                base_config=base_config,
                 emit=emit,
             )
             response = TransformResponse(**result.model_dump(), seed=request.seed)
@@ -169,6 +173,7 @@ def _run_non_streaming(
     generator: Generator,
     verifier: Verifier,
     scorer: Scorer,
+    base_config: AgentConfig,
 ) -> TransformResponse:
     result = run_agent(
         request.text,
@@ -176,7 +181,7 @@ def _run_non_streaming(
         generator=_RequestGenerator(generator, request.seed),
         verifier=verifier,
         scorer=scorer,
-        config=AgentConfig(max_generations=request.max_iter),
+        config=base_config.model_copy(update={"max_generations": request.max_iter}),
     )
     return TransformResponse(**result.model_dump(), seed=request.seed)
 
@@ -188,6 +193,7 @@ async def transform(
     generator: Annotated[Generator, Depends(get_generator)],
     verifier: Annotated[Verifier, Depends(get_verifier)],
     scorer: Annotated[Scorer, Depends(get_scorer)],
+    base_config: Annotated[AgentConfig, Depends(get_agent_config)],
 ) -> TransformResponse | StreamingResponse:
     if not request.stream:
         return await asyncio.to_thread(
@@ -197,6 +203,7 @@ async def transform(
             generator,
             verifier,
             scorer,
+            base_config,
         )
     return StreamingResponse(
         _event_stream(
@@ -205,6 +212,7 @@ async def transform(
             generator=generator,
             verifier=verifier,
             scorer=scorer,
+            base_config=base_config,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},

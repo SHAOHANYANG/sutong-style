@@ -4,6 +4,17 @@
 
 指标没改善也照实写。负结果也是结果。
 
+## 2026-10-09 EDT 服务接入真实模型（T3.1 之后、T3.7 之前）
+
+`/v1/transform` 现在跑的是真实流水线：三路检索、微调模型生成、保真校验与文体打分、修订循环。此前接口只有骨架，依赖是占位实现。
+
+- 新增 `scripts/serve_model.py`：GPU 进程，加载 sutong-v2 和 bge-m3，提供 OpenAI 兼容的三个路由。解码复用 `greedy_decode`。
+- 新增 `infra/model_server_client.py` 与 `api/assembly.py`：接口进程用 `openai` SDK 调模型服务，按 SPEC §4.6 主配置装配检索，不 import torch。
+- 设置环境变量 `SUTONG_MODEL_BASE_URL` 才接入真实流水线；不设时行为与之前相同。
+- 实测：顺序 10 个请求全部成功、无兜底；一轮通过的 8 个均值 2.46 秒，触发修订的 2 个为 7.60 秒和 7.88 秒，中位数 2.24 秒，显存约 5.1 GB。单机顺序请求，不是并发压测。
+- 没有做的：vLLM、并发与吞吐测试、缓存（T3.2 起）。偏离 SPEC §5「走 vLLM」的理由见 QUESTIONS Q33。
+- 观察（未做系统评估）：这 10 条是真人撰写的短白话，输出与输入很接近，改动多在个别用词。这与项目一开始记录的「域外输入风格化不足」一致，需要 `human_eval` 才能下结论。
+
 ## 2026-10-09 EDT T2.5 第二轮：回显防护与 system 反馈格式
 
 规则是 SPEC §4.9，在写代码和跑 GPU 之前提交（`d66d84f`）。生成在 WSL2（2026-10-09T18:28Z，代码 `7ff1cf8`，sutong-v2，贪心解码，seed 42），六个臂共约 19 分钟，评估在 Windows。数字取自 `eval/reports/agent2-eval.*`、六份 `agent2-*.json` 和 `agent2-run-manifest.json`。§4.8 的规则、结论和 README 那一行没有动。

@@ -1,5 +1,24 @@
 # QUESTIONS
 
+## Q33 — 服务接入真实模型的方式（2026-10-09，按假设实现）
+
+**问题**
+SPEC §5 写的是「生成走 vLLM 的 OpenAI 兼容接口」，并要求 api 进程不 import torch。但在线检索的 dense 一路需要对任意输入现场编码（离线实验用的是预先缓存的查询向量），SPEC 没有写这个编码放在哪；服务用哪种反馈格式、开不开回显防护也没有写。vLLM 在这台 8GB 的 Blackwell 显卡上还没有装过。
+
+**假设**
+1. 先不装 vLLM，写一个最小的模型服务 `scripts/serve_model.py`：同一个 GPU 进程里加载微调模型和 bge-m3，提供 `/v1/models`、`/v1/chat/completions`、`/v1/embeddings` 三个 OpenAI 兼容路由。解码直接调用 `scripts.generate.greedy_decode`，与全部离线实验是同一个函数。接口形状与 vLLM 一致，T3.7 换成 vLLM 时客户端不用改。
+2. api 进程用 `openai` SDK 调这个服务（`infra/model_server_client.py`），不 import torch。查询向量也走这个服务；客户端在健康检查里核对服务端编码器的 revision 与文档索引一致，不一致则 `/healthz` 报 503，避免拿两个版本的向量相比。
+3. prompt 超出 4096 − max_tokens 时模型服务返回 400，不截断，和离线实验的规则相同；生成器因此抛错时按 SPEC §4.4 走兜底。只支持贪心解码，传别的 temperature 直接 400。
+4. 服务的检索用 SPEC §4.6 的主配置（balanced，k = 2），取自 `eval/configs/retrieval.yaml`。修订循环用 system 反馈格式并打开回显防护（§4.9 的主臂配置）：理由是它在六个臂里是唯一没有把修订指令返回给调用方的格式；它相对检索行并没有可靠的保真改善，这一点 README 已写明。
+5. 是否接入真实流水线由环境变量 `SUTONG_MODEL_BASE_URL` 决定；不设时保留占位实现，进程照常启动，`/healthz` 报 503。
+6. 同一张显卡上生成和编码用一把锁串行执行，不做批处理。并发与吞吐留给 T3.7。
+
+**实测（2026-10-09，RTX 5060 Laptop）**
+顺序 10 个请求（自编白话，35–49 字）全部 200、无兜底；一轮通过 8 个，均值 2.46 秒；触发修订 2 个，7.60 秒与 7.88 秒；中位数 2.24 秒；显存约 5.1 GB。不是并发压测。
+
+**影响范围**
+`scripts/serve_model.py`、`infra/model_server_client.py`、`api/{assembly,settings,deps,routes,main}.py`、`tests/test_service_pipeline.py`、README。不改 `agent/`、SPEC。
+
 ## Q32 — 同步图桥接 SSE、伪 token、输入上限与 seed（2026-10-09，按假设实现）
 
 **问题**
