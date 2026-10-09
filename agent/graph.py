@@ -303,6 +303,28 @@ def build_graph(
     return graph.compile(), box
 
 
+def initial_state(vernacular: str, settings: AgentConfig) -> AgentState:
+    """The state every run starts from. The API streams the graph and needs the same one."""
+    return {
+        "input": vernacular,
+        "exemplars": [],
+        "candidates": [],
+        "violation_counts": [],
+        "violations_history": [],
+        "scores": [],
+        "last_violations": [],
+        "iter": 0,
+        "re_retrieved": False,
+        "max_generations": settings.max_generations,
+        "score_threshold": settings.re_retrieve_score_threshold,
+        "feedback_format": settings.feedback_format,
+        "echo_guard": settings.echo_guard,
+        "echo_chars": [],
+        "trace": [],
+        "halt": False,
+    }
+
+
 def run_agent(
     vernacular: str,
     *,
@@ -332,24 +354,7 @@ def run_agent(
         now_fn=now_fn,
         mono_fn=mono_fn,
     )
-    initial: AgentState = {
-        "input": vernacular,
-        "exemplars": [],
-        "candidates": [],
-        "violation_counts": [],
-        "violations_history": [],
-        "scores": [],
-        "last_violations": [],
-        "iter": 0,
-        "re_retrieved": False,
-        "max_generations": settings.max_generations,
-        "score_threshold": settings.re_retrieve_score_threshold,
-        "feedback_format": settings.feedback_format,
-        "echo_guard": settings.echo_guard,
-        "echo_chars": [],
-        "trace": [],
-        "halt": False,
-    }
+    initial = initial_state(vernacular, settings)
     try:
         final_raw = compiled.invoke(initial, {"recursion_limit": RECURSION_LIMIT})
         state = cast(AgentState, final_raw)

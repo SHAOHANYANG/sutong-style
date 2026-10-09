@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from langgraph.errors import GraphRecursionError
 
 from agent.config import AgentConfig
-from agent.graph import build_graph, build_result, run_agent
+from agent.graph import build_graph, build_result, initial_state, run_agent
 from agent.nodes import Generator, Retriever, Scorer, Verifier
 from agent.prompts import make_revision_message_builder
 from agent.state import RECURSION_LIMIT, AgentResult, AgentState
@@ -61,27 +61,6 @@ class _RequestGenerator:
         return self._generator.generate(messages)
 
 
-def _initial_state(text: str, settings: AgentConfig) -> AgentState:
-    return {
-        "input": text,
-        "exemplars": [],
-        "candidates": [],
-        "violation_counts": [],
-        "violations_history": [],
-        "scores": [],
-        "last_violations": [],
-        "iter": 0,
-        "re_retrieved": False,
-        "max_generations": settings.max_generations,
-        "score_threshold": settings.re_retrieve_score_threshold,
-        "feedback_format": settings.feedback_format,
-        "echo_guard": settings.echo_guard,
-        "echo_chars": [],
-        "trace": [],
-        "halt": False,
-    }
-
-
 def _chunks(text: str) -> Iterator[str]:
     for start in range(0, len(text), TOKEN_CHUNK_CHARS):
         yield text[start : start + TOKEN_CHUNK_CHARS]
@@ -105,7 +84,7 @@ def _run_streaming_graph(
         scorer=scorer,
         message_builder=make_revision_message_builder(settings.feedback_format),
     )
-    initial = _initial_state(request.text, settings)
+    initial = initial_state(request.text, settings)
     state = initial
     emitted_trace_count = 0
     try:
