@@ -123,7 +123,10 @@ uv run python -m scripts.eval_agent --experiment v2
 模型单变量对照（仅重放原 20 条一次，拒绝改动 prompt、seed、范例或复用输出路径）：
 
 ```bash
-uv run python -m scripts.model_control \n  --baseline corpus/rebuild_report_round2_20261003.json \n  --output corpus/preview_pairs_model_control_20261003.jsonl \n  --report corpus/rebuild_report_model_control_20261003.json
+uv run python -m scripts.model_control \
+  --baseline corpus/rebuild_report_round2_20261003.json \
+  --output corpus/preview_pairs_model_control_20261003.jsonl \
+  --report corpus/rebuild_report_model_control_20261003.json
 ```
 
 两段式预览（固定 20 条和采样参数，最多 40 次调用，输出只留在本地 `corpus/`）：
