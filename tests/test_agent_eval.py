@@ -10,7 +10,7 @@ from agent.prompts import FOLLOWUP_LEAD, RESTATE_LEAD, build_revision_messages
 from eval.fidelity import Violation
 from eval.run_eval import evaluate, load_config
 from retrieval.prompt import Exemplar, build_prompt
-from scripts.eval_agent import compare, exit_condition
+from scripts.eval_agent import compare, exit_condition, feedback_echo
 from scripts.eval_agent import main as eval_main
 from scripts.run_agent_eval import (
     PRIMARY_ARM,
@@ -562,3 +562,35 @@ def test_conclusions_follow_the_interval_in_both_directions() -> None:
     mixed_optimized = mixed["optimized"]
     assert isinstance(mixed_optimized, dict)
     assert mixed_optimized["numeral_recall"]["conclusion"] == "未检出差异"
+
+
+def test_feedback_echo_flags_outputs_that_copy_the_feedback_back() -> None:
+    def row(doc_id: str, selected: int, outputs: list[str]) -> dict[str, object]:
+        missing = [{"kind": "numeral_missing", "expected": "12块", "actual": None}]
+        return {
+            "id": doc_id,
+            "rounds": [
+                {"output": text, "violations": missing if index == 0 else []}
+                for index, text in enumerate(outputs)
+            ],
+            "selected_round": selected,
+        }
+
+    rows = [
+        # A real fix: the number is in the prose, not in quoted feedback.
+        row("a", 2, ["戊出门了", "戊带着十二块钱出门"]),
+        # The prose is unchanged and the feedback is appended, so the verifier is fooled.
+        row("b", 2, ["戊出门了", f"戊出门了\n{RESTATE_LEAD}\n- 输入里的数值「12块」必须保留"]),
+        # A paraphrased echo still carries the quoted fragment.
+        row("c", 3, ["戊出门了", FOLLOWUP_LEAD, "戊出门了。输入中的数字「12块」要保留"]),
+        # An echo that was not selected counts as a round, not as a final output.
+        row("d", 1, ["戊出门了", FOLLOWUP_LEAD]),
+    ]
+    assert feedback_echo(rows) == {
+        "final_cases": 2,
+        "final_ids": ["b", "c"],
+        "revision_rounds": 4,
+        "revision_rounds_total": 5,
+        "second_round": 3,
+        "second_round_total": 4,
+    }

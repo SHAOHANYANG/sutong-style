@@ -1,0 +1,759 @@
+{
+  "arms": [
+    {
+      "aggregate": {
+        "cjk_numeral_ratio_delta": 0.17642963079401697,
+        "copy_ratio": 0.7500930133584359,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "length_ratio": 1.0369817360766775,
+        "numeral_recall": 0.919774011299435,
+        "profile_gap": 0.21086749471328187,
+        "profile_gap_per_case": 0.48479153590060137,
+        "style_distance": 0.9326094527766111
+      },
+      "baseline": "retrieval-balanced-k2",
+      "changed_cases": 8,
+      "exemplar_source": "balanced-k2",
+      "fallbacks": [],
+      "feedback_echo": {
+        "final_cases": 0,
+        "final_ids": [],
+        "revision_rounds": 6,
+        "revision_rounds_total": 26,
+        "second_round": 6,
+        "second_round_total": 13
+      },
+      "feedback_format": "followup",
+      "first_round_violation_cases": 13,
+      "name": "agent-balanced-k2-followup",
+      "role": "主臂",
+      "rounds": {
+        "selected_round": {
+          "1": 51,
+          "2": 0,
+          "3": 8,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 51,
+          "fallback": 0,
+          "max_rounds": 8,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 46,
+          "2": 0,
+          "3": 13
+        }
+      },
+      "violation_transitions": {
+        "entity_hallucination": {
+          "final": 1,
+          "final_cases": 1,
+          "first": 1,
+          "first_cases": 1,
+          "fixed": 0,
+          "introduced": 0
+        },
+        "entity_missing": {
+          "final": 0,
+          "final_cases": 0,
+          "first": 0,
+          "first_cases": 0,
+          "fixed": 0,
+          "introduced": 0
+        },
+        "numeral_missing": {
+          "final": 7,
+          "final_cases": 6,
+          "first": 11,
+          "first_cases": 10,
+          "fixed": 4,
+          "introduced": 0
+        },
+        "title": {
+          "final": 2,
+          "final_cases": 1,
+          "first": 3,
+          "first_cases": 2,
+          "fixed": 1,
+          "introduced": 0
+        }
+      }
+    },
+    {
+      "aggregate": {
+        "cjk_numeral_ratio_delta": 0.19979408214920344,
+        "copy_ratio": 0.7354589800549584,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "length_ratio": 1.0776857378841747,
+        "numeral_recall": 0.9858757062146892,
+        "profile_gap": 0.21112416105042967,
+        "profile_gap_per_case": 0.5217858945696424,
+        "style_distance": 0.9361930314606245
+      },
+      "baseline": "retrieval-balanced-k2",
+      "changed_cases": 11,
+      "exemplar_source": "balanced-k2",
+      "fallbacks": [],
+      "feedback_echo": {
+        "final_cases": 10,
+        "final_ids": [
+          "妇女生活_0074",
+          "另一种妇女生活_0033",
+          "罂粟之家_0117",
+          "我的帝王生涯_0116",
+          "我的帝王生涯_0142",
+          "我的帝王生涯_0225",
+          "我的帝王生涯_0288",
+          "我的帝王生涯_0363",
+          "我的帝王生涯_0367",
+          "妻妾成群_0022"
+        ],
+        "revision_rounds": 12,
+        "revision_rounds_total": 17,
+        "second_round": 10,
+        "second_round_total": 13
+      },
+      "feedback_format": "restate",
+      "first_round_violation_cases": 13,
+      "name": "agent-balanced-k2-restate",
+      "role": "探索性",
+      "rounds": {
+        "selected_round": {
+          "1": 48,
+          "2": 10,
+          "3": 1,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 56,
+          "fallback": 0,
+          "max_rounds": 3,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 46,
+          "2": 9,
+          "3": 4
+        }
+      },
+      "violation_transitions": {
+        "entity_hallucination": {
+          "final": 1,
+          "final_cases": 1,
+          "first": 1,
+          "first_cases": 1,
+          "fixed": 0,
+          "introduced": 0
+        },
+        "entity_missing": {
+          "final": 0,
+          "final_cases": 0,
+          "first": 0,
+          "first_cases": 0,
+          "fixed": 0,
+          "introduced": 0
+        },
+        "numeral_missing": {
+          "final": 2,
+          "final_cases": 2,
+          "first": 11,
+          "first_cases": 10,
+          "fixed": 9,
+          "introduced": 0
+        },
+        "title": {
+          "final": 0,
+          "final_cases": 0,
+          "first": 3,
+          "first_cases": 2,
+          "fixed": 3,
+          "introduced": 0
+        }
+      }
+    },
+    {
+      "aggregate": {
+        "cjk_numeral_ratio_delta": -0.004798547824544159,
+        "copy_ratio": 0.7129264745561567,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.014124293785310733,
+        "length_ratio": 1.0107828083566892,
+        "numeral_recall": 0.8751412429378531,
+        "profile_gap": 0.19984219021888586,
+        "profile_gap_per_case": 0.5147321147361131,
+        "style_distance": 0.9186195466948348
+      },
+      "baseline": "retrieval-k0",
+      "changed_cases": 5,
+      "exemplar_source": "k0",
+      "fallbacks": [],
+      "feedback_echo": {
+        "final_cases": 1,
+        "final_ids": [
+          "我的帝王生涯_0363"
+        ],
+        "revision_rounds": 5,
+        "revision_rounds_total": 34,
+        "second_round": 5,
+        "second_round_total": 18
+      },
+      "feedback_format": "followup",
+      "first_round_violation_cases": 18,
+      "name": "agent-k0-followup",
+      "role": "探索性",
+      "rounds": {
+        "selected_round": {
+          "1": 54,
+          "2": 4,
+          "3": 1,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 44,
+          "fallback": 0,
+          "max_rounds": 15,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 41,
+          "2": 2,
+          "3": 16
+        }
+      },
+      "violation_transitions": {
+        "entity_hallucination": {
+          "final": 3,
+          "final_cases": 3,
+          "first": 3,
+          "first_cases": 3,
+          "fixed": 0,
+          "introduced": 0
+        },
+        "entity_missing": {
+          "final": 0,
+          "final_cases": 0,
+          "first": 0,
+          "first_cases": 0,
+          "fixed": 0,
+          "introduced": 0
+        },
+        "numeral_missing": {
+          "final": 12,
+          "final_cases": 12,
+          "first": 14,
+          "first_cases": 14,
+          "fixed": 2,
+          "introduced": 0
+        },
+        "title": {
+          "final": 2,
+          "final_cases": 1,
+          "first": 3,
+          "first_cases": 2,
+          "fixed": 1,
+          "introduced": 0
+        }
+      }
+    },
+    {
+      "aggregate": {
+        "cjk_numeral_ratio_delta": 0.005206934873441608,
+        "copy_ratio": 0.7047872256581241,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.014124293785310733,
+        "length_ratio": 1.0425998411075543,
+        "numeral_recall": 0.9401129943502825,
+        "profile_gap": 0.19895687059952047,
+        "profile_gap_per_case": 0.5394342883391735,
+        "style_distance": 0.9216008004145982
+      },
+      "baseline": "retrieval-k0",
+      "changed_cases": 12,
+      "exemplar_source": "k0",
+      "fallbacks": [],
+      "feedback_echo": {
+        "final_cases": 9,
+        "final_ids": [
+          "妇女生活_0074",
+          "另一种妇女生活_0033",
+          "园艺_0082",
+          "罂粟之家_0018",
+          "我的帝王生涯_0142",
+          "我的帝王生涯_0225",
+          "我的帝王生涯_0288",
+          "我的帝王生涯_0363",
+          "我的帝王生涯_0372"
+        ],
+        "revision_rounds": 13,
+        "revision_rounds_total": 26,
+        "second_round": 11,
+        "second_round_total": 18
+      },
+      "feedback_format": "restate",
+      "first_round_violation_cases": 18,
+      "name": "agent-k0-restate",
+      "role": "探索性",
+      "rounds": {
+        "selected_round": {
+          "1": 47,
+          "2": 12,
+          "3": 0,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 51,
+          "fallback": 0,
+          "max_rounds": 8,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 41,
+          "2": 10,
+          "3": 8
+        }
+      },
+      "violation_transitions": {
+        "entity_hallucination": {
+          "final": 3,
+          "final_cases": 3,
+          "first": 3,
+          "first_cases": 3,
+          "fixed": 0,
+          "introduced": 0
+        },
+        "entity_missing": {
+          "final": 0,
+          "final_cases": 0,
+          "first": 0,
+          "first_cases": 0,
+          "fixed": 0,
+          "introduced": 0
+        },
+        "numeral_missing": {
+          "final": 6,
+          "final_cases": 6,
+          "first": 14,
+          "first_cases": 14,
+          "fixed": 8,
+          "introduced": 0
+        },
+        "title": {
+          "final": 0,
+          "final_cases": 0,
+          "first": 3,
+          "first_cases": 2,
+          "fixed": 3,
+          "introduced": 0
+        }
+      }
+    }
+  ],
+  "baselines": [
+    {
+      "aggregate": {
+        "cjk_numeral_ratio_delta": 0.1962206954713514,
+        "copy_ratio": 0.7420065238390928,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.00423728813559322,
+        "length_ratio": 1.034352985433246,
+        "numeral_recall": 0.8915254237288136,
+        "profile_gap": 0.21428747508553264,
+        "profile_gap_per_case": 0.48526247805497336,
+        "style_distance": 0.9295221674830721
+      },
+      "name": "retrieval-balanced-k2"
+    },
+    {
+      "aggregate": {
+        "cjk_numeral_ratio_delta": -0.004798547824544159,
+        "copy_ratio": 0.7092469288384025,
+        "entity_recall": 1.0,
+        "hallucination_rate": 0.014124293785310733,
+        "length_ratio": 1.0056919873073542,
+        "numeral_recall": 0.8610169491525423,
+        "profile_gap": 0.20381635390888558,
+        "profile_gap_per_case": 0.5139916710537897,
+        "style_distance": 0.9225125975073157
+      },
+      "name": "retrieval-k0"
+    }
+  ],
+  "changelog_markdown": "主臂是 agent-balanced-k2-followup，对照是 retrieval-balanced-k2（同样 59 条，逐条配对，agent − 对照）。\n其余三臂是探索性的，不替换 README 的 agent 行。style_win_rate 本轮不跑。\n\n校验器与评估用的是同一套规则：agent 按「违规最少」挑选最终版本，而违规就是从计算 entity_recall、numeral_recall、hallucination_rate 的同一份抽取结果里导出的。这三项的改善在一定程度上是构造使然，不能单独作为事实漂移被治好的证据；规则抓不到的语义漂移 agent 同样看不见。必须连同「没有优化的」那张表一起读。\n\n人工抽查：pending（由仓库所有者进行，不得由模型代填）。\n\n**主臂 − 对照（retrieval-balanced-k2）：agent 直接优化的指标**\n\n| 指标 | 均值差 | 95% 区间 | 结论 |\n|---|---|---|---|\n| entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| numeral_recall | 0.028249 | [0.005650, 0.059322] | 改善 |\n| hallucination_rate | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n\n**主臂 − 对照（retrieval-balanced-k2）：agent 没有优化的指标**\n\n| 指标 | 均值差 | 95% 区间 | 结论 |\n|---|---|---|---|\n| profile_gap_per_case | -0.000471 | [-0.009576, 0.007578] | 未检出差异 |\n| copy_ratio | 0.008086 | [0.001485, 0.017025] | 只报告 |\n| style_distance | 0.003087 | [-0.008065, 0.015029] | 只报告 |\n| length_ratio | 0.002629 | [-0.000865, 0.007245] | 只报告 |\n| cjk_numeral_z | -0.019791 | [-0.059373, 0.000000] | 只报告 |\n| profile_gap | -0.003420 | — | 只报点估计 |\n| cjk_numeral_ratio_profile_mean_delta | agent 0.176430，基线 0.196221 | — | 只报告 |\n\n**主臂 − k0（累计）（retrieval-k0）：agent 直接优化的指标**\n\n| 指标 | 均值差 | 95% 区间 | 结论 |\n|---|---|---|---|\n| entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| numeral_recall | 0.058757 | [0.019774, 0.101695] | 改善 |\n| hallucination_rate | -0.009887 | [-0.025424, 0.000000] | 未检出差异 |\n\n**主臂 − k0（累计）（retrieval-k0）：agent 没有优化的指标**\n\n| 指标 | 均值差 | 95% 区间 | 结论 |\n|---|---|---|---|\n| profile_gap_per_case | -0.029200 | [-0.061495, 0.003069] | 未检出差异 |\n| copy_ratio | 0.040846 | [0.026105, 0.057235] | 只报告 |\n| style_distance | 0.010097 | [-0.049270, 0.069199] | 只报告 |\n| length_ratio | 0.031290 | [0.004571, 0.074011] | 只报告 |\n| cjk_numeral_z | 0.181228 | [0.005223, 0.474460] | 只报告 |\n| profile_gap | 0.007051 | — | 只报点估计 |\n| cjk_numeral_ratio_profile_mean_delta | agent 0.176430，基线 -0.004799 | — | 只报告 |\n\n| 组合 | 角色 | style_distance | profile_gap | profile_gap_per_case | entity_recall | numeral_recall | hallucination_rate | copy_ratio | 字数比 | cjk_numeral_ratio 逐维均值差 |\n|---|---|---|---|---|---|---|---|---|---|---|\n| agent-balanced-k2-followup | 主臂 | 0.932609 | 0.210867 | 0.484792 | 1.000000 | 0.919774 | 0.004237 | 0.750093 | 1.036982 | 0.176430 |\n| agent-balanced-k2-restate | 探索性 | 0.936193 | 0.211124 | 0.521786 | 1.000000 | 0.985876 | 0.004237 | 0.735459 | 1.077686 | 0.199794 |\n| agent-k0-followup | 探索性 | 0.918620 | 0.199842 | 0.514732 | 1.000000 | 0.875141 | 0.014124 | 0.712926 | 1.010783 | -0.004799 |\n| agent-k0-restate | 探索性 | 0.921601 | 0.198957 | 0.539434 | 1.000000 | 0.940113 | 0.014124 | 0.704787 | 1.042600 | 0.005207 |\n| retrieval-balanced-k2 | 对照 | 0.929522 | 0.214287 | 0.485262 | 1.000000 | 0.891525 | 0.004237 | 0.742007 | 1.034353 | 0.196221 |\n| retrieval-k0 | 对照 | 0.922513 | 0.203816 | 0.513992 | 1.000000 | 0.861017 | 0.014124 | 0.709247 | 1.005692 | -0.004799 |\n\n| 臂 | 1 轮 | 2 轮 | 3 轮 | accepted | max_rounds | recursion_limit | fallback | 选中第 1 轮 | 选中第 2 轮 | 选中第 3 轮 | 未选中 | 第一轮有违规的样本 | 最终输出不同于基线的样本 |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n| agent-balanced-k2-followup | 46 | 0 | 13 | 51 | 8 | 0 | 0 | 51 | 0 | 8 | 0 | 13 | 8 |\n| agent-balanced-k2-restate | 46 | 9 | 4 | 56 | 3 | 0 | 0 | 48 | 10 | 1 | 0 | 13 | 11 |\n| agent-k0-followup | 41 | 2 | 16 | 44 | 15 | 0 | 0 | 54 | 4 | 1 | 0 | 18 | 5 |\n| agent-k0-restate | 41 | 10 | 8 | 51 | 8 | 0 | 0 | 47 | 12 | 0 | 0 | 18 | 12 |\n\n| 臂 | 违规类型 | 第一轮条数 | 最终条数 | 修掉 | 新引入 | 第一轮涉及样本 | 最终涉及样本 |\n|---|---|---|---|---|---|---|---|\n| agent-balanced-k2-followup | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |\n| agent-balanced-k2-followup | numeral_missing | 11 | 7 | 4 | 0 | 10 | 6 |\n| agent-balanced-k2-followup | entity_hallucination | 1 | 1 | 0 | 0 | 1 | 1 |\n| agent-balanced-k2-followup | title | 3 | 2 | 1 | 0 | 2 | 1 |\n| agent-balanced-k2-restate | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |\n| agent-balanced-k2-restate | numeral_missing | 11 | 2 | 9 | 0 | 10 | 2 |\n| agent-balanced-k2-restate | entity_hallucination | 1 | 1 | 0 | 0 | 1 | 1 |\n| agent-balanced-k2-restate | title | 3 | 0 | 3 | 0 | 2 | 0 |\n| agent-k0-followup | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |\n| agent-k0-followup | numeral_missing | 14 | 12 | 2 | 0 | 14 | 12 |\n| agent-k0-followup | entity_hallucination | 3 | 3 | 0 | 0 | 3 | 3 |\n| agent-k0-followup | title | 3 | 2 | 1 | 0 | 2 | 1 |\n| agent-k0-restate | entity_missing | 0 | 0 | 0 | 0 | 0 | 0 |\n| agent-k0-restate | numeral_missing | 14 | 6 | 8 | 0 | 14 | 6 |\n| agent-k0-restate | entity_hallucination | 3 | 3 | 0 | 0 | 3 | 3 |\n| agent-k0-restate | title | 3 | 0 | 3 | 0 | 2 | 0 |\n\n兜底样本：无。\n\n**事后诊断（不在 SPEC 4.8 的预注册里，看到结果之后加的）：反馈回显**\n\n修订反馈里用「」引用了缺失的片段。输出若把反馈原样抄回去，片段就出现在输出里，校验器判为已修复，正文其实没改。下表数的是含反馈引导语或「片段」的输出。\n\n| 臂 | 最终输出改动的样本 | 其中最终输出含反馈回显 | 修订轮含回显 | 第 2 轮含回显 |\n|---|---|---|---|---|\n| agent-balanced-k2-followup | 8 | 0 | 6 / 26 | 6 / 13 |\n| agent-balanced-k2-restate | 11 | 10 | 12 / 17 | 10 / 13 |\n| agent-k0-followup | 5 | 1 | 5 / 34 | 5 / 18 |\n| agent-k0-restate | 12 | 9 | 13 / 26 | 11 / 18 |\n\n**探索臂（各自对第一轮所取的文件，未做多重比较校正）**\n\n| 臂 | 基线 | 指标 | 均值差 | 95% 区间 | 结论 |\n|---|---|---|---|---|---|\n| agent-balanced-k2-restate | retrieval-balanced-k2 | entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| agent-balanced-k2-restate | retrieval-balanced-k2 | numeral_recall | 0.094350 | [0.033898, 0.168927] | 改善 |\n| agent-balanced-k2-restate | retrieval-balanced-k2 | hallucination_rate | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| agent-balanced-k2-restate | retrieval-balanced-k2 | profile_gap_per_case | 0.036523 | [0.015578, 0.060458] | 恶化 |\n| agent-balanced-k2-restate | retrieval-balanced-k2 | copy_ratio | -0.006548 | [-0.015568, 0.002032] | 只报告 |\n| agent-balanced-k2-restate | retrieval-balanced-k2 | style_distance | 0.006671 | [-0.011913, 0.030375] | 只报告 |\n| agent-balanced-k2-restate | retrieval-balanced-k2 | length_ratio | 0.043333 | [0.020108, 0.069513] | 只报告 |\n| agent-balanced-k2-restate | retrieval-balanced-k2 | cjk_numeral_z | 0.003573 | [0.000000, 0.010720] | 只报告 |\n| agent-k0-followup | retrieval-k0 | entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| agent-k0-followup | retrieval-k0 | numeral_recall | 0.014124 | [0.000000, 0.036723] | 未检出差异 |\n| agent-k0-followup | retrieval-k0 | hallucination_rate | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| agent-k0-followup | retrieval-k0 | profile_gap_per_case | 0.000740 | [-0.003741, 0.006685] | 未检出差异 |\n| agent-k0-followup | retrieval-k0 | copy_ratio | 0.003680 | [-0.001506, 0.011026] | 只报告 |\n| agent-k0-followup | retrieval-k0 | style_distance | -0.003893 | [-0.009978, 0.000051] | 只报告 |\n| agent-k0-followup | retrieval-k0 | length_ratio | 0.005091 | [0.000323, 0.013276] | 只报告 |\n| agent-k0-followup | retrieval-k0 | cjk_numeral_z | 0.000000 | [0.000000, 0.000000] | 只报告 |\n| agent-k0-restate | retrieval-k0 | entity_recall | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| agent-k0-restate | retrieval-k0 | numeral_recall | 0.079096 | [0.028249, 0.141243] | 改善 |\n| agent-k0-restate | retrieval-k0 | hallucination_rate | 0.000000 | [0.000000, 0.000000] | 未检出差异 |\n| agent-k0-restate | retrieval-k0 | profile_gap_per_case | 0.025443 | [0.003662, 0.050273] | 恶化 |\n| agent-k0-restate | retrieval-k0 | copy_ratio | -0.004460 | [-0.011693, 0.002758] | 只报告 |\n| agent-k0-restate | retrieval-k0 | style_distance | -0.000912 | [-0.015625, 0.011964] | 只报告 |\n| agent-k0-restate | retrieval-k0 | length_ratio | 0.036908 | [0.015636, 0.060932] | 只报告 |\n| agent-k0-restate | retrieval-k0 | cjk_numeral_z | 0.010005 | [0.000000, 0.026443] | 只报告 |\n\n| 目标 | 阈值 | 主臂 | 达到 |\n|---|---|---|---|\n| numeral_recall | >= 0.92 | 0.919774 | 未达到 |\n| hallucination_rate | <= 0.005 | 0.004237 | 达到 |\n| profile_gap | < 0.204 | 0.210867 | 未达到 |\n\nPLAN 出口条件（hallucination_rate 明显下降）：未达到（结论：未检出差异）。\n",
+  "exit_condition": {
+    "hallucination_rate_conclusion": "未检出差异",
+    "met": false,
+    "rule": "主臂对 retrieval-balanced-k2 的 hallucination_rate 区间不含 0 且方向为下降"
+  },
+  "exploratory": {
+    "agent-balanced-k2-restate": {
+      "baseline": "retrieval-balanced-k2",
+      "changed_cases": 11,
+      "n": 59,
+      "optimized": {
+        "entity_recall": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "hallucination_rate": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "numeral_recall": {
+          "conclusion": "改善",
+          "high": 0.16892655367231638,
+          "low": 0.03389830508474576,
+          "mean_diff": 0.09435028248587571
+        }
+      },
+      "unoptimized": {
+        "cjk_numeral_ratio_profile_mean_delta": {
+          "agent": 0.19979408214920344,
+          "baseline": 0.1962206954713514,
+          "conclusion": null
+        },
+        "cjk_numeral_z": {
+          "conclusion": null,
+          "high": 0.01072016003355616,
+          "low": 0.0,
+          "mean_diff": 0.0035733866778520536
+        },
+        "copy_ratio": {
+          "conclusion": null,
+          "high": 0.0020323550477174958,
+          "low": -0.015567924588183285,
+          "mean_diff": -0.006547543784134486
+        },
+        "length_ratio": {
+          "conclusion": null,
+          "high": 0.06951340760687064,
+          "low": 0.02010816416207796,
+          "mean_diff": 0.04333275245092899
+        },
+        "profile_gap": {
+          "agent": 0.21112416105042967,
+          "baseline": 0.21428747508553264,
+          "conclusion": null,
+          "diff": -0.0031633140351029765
+        },
+        "profile_gap_per_case": {
+          "conclusion": "恶化",
+          "high": 0.06045788848102652,
+          "low": 0.015577885541096168,
+          "mean_diff": 0.03652341651466914
+        },
+        "style_distance": {
+          "conclusion": null,
+          "high": 0.030375068293180305,
+          "low": -0.011913118339901375,
+          "mean_diff": 0.006670863977552323
+        }
+      }
+    },
+    "agent-k0-followup": {
+      "baseline": "retrieval-k0",
+      "changed_cases": 5,
+      "n": 59,
+      "optimized": {
+        "entity_recall": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "hallucination_rate": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "numeral_recall": {
+          "conclusion": "未检出差异",
+          "high": 0.03672316384180791,
+          "low": 0.0,
+          "mean_diff": 0.014124293785310734
+        }
+      },
+      "unoptimized": {
+        "cjk_numeral_ratio_profile_mean_delta": {
+          "agent": -0.004798547824544159,
+          "baseline": -0.004798547824544159,
+          "conclusion": null
+        },
+        "cjk_numeral_z": {
+          "conclusion": null,
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "copy_ratio": {
+          "conclusion": null,
+          "high": 0.011026111670428844,
+          "low": -0.0015056614110031034,
+          "mean_diff": 0.0036795457177541675
+        },
+        "length_ratio": {
+          "conclusion": null,
+          "high": 0.013275649472856723,
+          "low": 0.0003229821026431171,
+          "mean_diff": 0.005090821049334986
+        },
+        "profile_gap": {
+          "agent": 0.19984219021888586,
+          "baseline": 0.20381635390888558,
+          "conclusion": null,
+          "diff": -0.003974163689999727
+        },
+        "profile_gap_per_case": {
+          "conclusion": "未检出差异",
+          "high": 0.006684588469556514,
+          "low": -0.0037413435099392413,
+          "mean_diff": 0.0007404436823235228
+        },
+        "style_distance": {
+          "conclusion": null,
+          "high": 5.0859219438417614e-05,
+          "low": -0.009977594537507364,
+          "mean_diff": -0.003893050812480991
+        }
+      }
+    },
+    "agent-k0-restate": {
+      "baseline": "retrieval-k0",
+      "changed_cases": 12,
+      "n": 59,
+      "optimized": {
+        "entity_recall": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "hallucination_rate": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "numeral_recall": {
+          "conclusion": "改善",
+          "high": 0.14124293785310735,
+          "low": 0.028248587570621472,
+          "mean_diff": 0.07909604519774012
+        }
+      },
+      "unoptimized": {
+        "cjk_numeral_ratio_profile_mean_delta": {
+          "agent": 0.005206934873441608,
+          "baseline": -0.004798547824544159,
+          "conclusion": null
+        },
+        "cjk_numeral_z": {
+          "conclusion": null,
+          "high": 0.026443061416105213,
+          "low": 0.0,
+          "mean_diff": 0.010005482697985756
+        },
+        "copy_ratio": {
+          "conclusion": null,
+          "high": 0.002757756609272095,
+          "low": -0.011693255162520611,
+          "mean_diff": -0.004459703180278387
+        },
+        "length_ratio": {
+          "conclusion": null,
+          "high": 0.060932056030778455,
+          "low": 0.015635873298589953,
+          "mean_diff": 0.0369078538002002
+        },
+        "profile_gap": {
+          "agent": 0.19895687059952047,
+          "baseline": 0.20381635390888558,
+          "conclusion": null,
+          "diff": -0.004859483309365115
+        },
+        "profile_gap_per_case": {
+          "conclusion": "恶化",
+          "high": 0.050272656049937116,
+          "low": 0.003662193671784716,
+          "mean_diff": 0.025442617285383894
+        },
+        "style_distance": {
+          "conclusion": null,
+          "high": 0.01196420744485918,
+          "low": -0.015624627156795353,
+          "mean_diff": -0.0009117970927174284
+        }
+      }
+    }
+  },
+  "human_spot_check": "pending",
+  "primary": {
+    "arm": "agent-balanced-k2-followup",
+    "vs_control": {
+      "baseline": "retrieval-balanced-k2",
+      "changed_cases": 8,
+      "n": 59,
+      "optimized": {
+        "entity_recall": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "hallucination_rate": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "numeral_recall": {
+          "conclusion": "改善",
+          "high": 0.059322033898305086,
+          "low": 0.005649717514124295,
+          "mean_diff": 0.02824858757062147
+        }
+      },
+      "unoptimized": {
+        "cjk_numeral_ratio_profile_mean_delta": {
+          "agent": 0.17642963079401697,
+          "baseline": 0.1962206954713514,
+          "conclusion": null
+        },
+        "cjk_numeral_z": {
+          "conclusion": null,
+          "high": 0.0,
+          "low": -0.05937319403200336,
+          "mean_diff": -0.019791064677334453
+        },
+        "copy_ratio": {
+          "conclusion": null,
+          "high": 0.017025025083565876,
+          "low": 0.0014847322399457149,
+          "mean_diff": 0.008086489519343201
+        },
+        "length_ratio": {
+          "conclusion": null,
+          "high": 0.00724477394357694,
+          "low": -0.0008651684854627801,
+          "mean_diff": 0.0026287506434319674
+        },
+        "profile_gap": {
+          "agent": 0.21086749471328187,
+          "baseline": 0.21428747508553264,
+          "conclusion": null,
+          "diff": -0.003419980372250775
+        },
+        "profile_gap_per_case": {
+          "conclusion": "未检出差异",
+          "high": 0.007577798840127826,
+          "low": -0.009575888257468286,
+          "mean_diff": -0.0004709421543719941
+        },
+        "style_distance": {
+          "conclusion": null,
+          "high": 0.01502912840749074,
+          "low": -0.008064855952677977,
+          "mean_diff": 0.0030872852935388793
+        }
+      }
+    },
+    "vs_k0": {
+      "baseline": "retrieval-k0",
+      "changed_cases": 58,
+      "n": 59,
+      "optimized": {
+        "entity_recall": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": 0.0,
+          "mean_diff": 0.0
+        },
+        "hallucination_rate": {
+          "conclusion": "未检出差异",
+          "high": 0.0,
+          "low": -0.025423728813559324,
+          "mean_diff": -0.009887005649717513
+        },
+        "numeral_recall": {
+          "conclusion": "改善",
+          "high": 0.1016949152542373,
+          "low": 0.01977401129943503,
+          "mean_diff": 0.05875706214689266
+        }
+      },
+      "unoptimized": {
+        "cjk_numeral_ratio_profile_mean_delta": {
+          "agent": 0.17642963079401697,
+          "baseline": -0.004798547824544159,
+          "conclusion": null
+        },
+        "cjk_numeral_z": {
+          "conclusion": null,
+          "high": 0.4744596646851494,
+          "low": 0.00522264206762992,
+          "mean_diff": 0.18122817861856114
+        },
+        "copy_ratio": {
+          "conclusion": null,
+          "high": 0.05723462879191573,
+          "low": 0.0261053576390406,
+          "mean_diff": 0.04084608452003339
+        },
+        "length_ratio": {
+          "conclusion": null,
+          "high": 0.07401087503240697,
+          "low": 0.004570604565293122,
+          "mean_diff": 0.03128974876932351
+        },
+        "profile_gap": {
+          "agent": 0.21086749471328187,
+          "baseline": 0.20381635390888558,
+          "conclusion": null,
+          "diff": 0.007051140804396283
+        },
+        "profile_gap_per_case": {
+          "conclusion": "未检出差异",
+          "high": 0.003069473338170402,
+          "low": -0.06149471384896521,
+          "mean_diff": -0.029200135153188218
+        },
+        "style_distance": {
+          "conclusion": null,
+          "high": 0.06919876349614244,
+          "low": -0.04927047972894152,
+          "mean_diff": 0.010096855269295374
+        }
+      }
+    }
+  },
+  "same_rules_note": "校验器与评估用的是同一套规则：agent 按「违规最少」挑选最终版本，而违规就是从计算 entity_recall、numeral_recall、hallucination_rate 的同一份抽取结果里导出的。这三项的改善在一定程度上是构造使然，不能单独作为事实漂移被治好的证据；规则抓不到的语义漂移 agent 同样看不见。必须连同「没有优化的」那张表一起读。",
+  "targets": {
+    "hallucination_rate": {
+      "met": true,
+      "op": "<=",
+      "threshold": 0.005,
+      "value": 0.00423728813559322
+    },
+    "numeral_recall": {
+      "met": false,
+      "op": ">=",
+      "threshold": 0.92,
+      "value": 0.919774011299435
+    },
+    "profile_gap": {
+      "met": false,
+      "op": "<",
+      "threshold": 0.204,
+      "value": 0.21086749471328187
+    }
+  },
+  "timestamp": "2026-10-09T17:52:32Z"
+}

@@ -17,7 +17,7 @@
 
 ## 2. 做到哪了
 
-Phase 0 全部完成。Phase 1（检索）全部完成，出口条件（README 指标表追加 retrieval 行）已满足；主配置相对 k = 0 **未检出差异**（SPEC §4.7）。`human_eval.jsonl` 正文尚未写入，PLAN T1.6 要求的检索召回评估仍欠。Phase 2 图骨架与修订 prompt / TraceEvent 已落地，T2.5 GPU 评估未跑。
+Phase 0 全部完成。Phase 1（检索）全部完成，出口条件（README 指标表追加 retrieval 行）已满足；主配置相对 k = 0 **未检出差异**（SPEC §4.7）。`human_eval.jsonl` 正文尚未写入，PLAN T1.6 要求的检索召回评估仍欠。Phase 2 四个代码任务与 T2.5 GPU 评估已完成：主臂 `numeral_recall` 0.892 → 0.920（改善，SPEC §4.8），PLAN 出口条件「`hallucination_rate` 明显下降」**未达到**；restate 臂的数字因反馈回显不可引用；人工抽查 pending。
 
 ### 提交历史
 
@@ -260,7 +260,7 @@ v2 的 eval 在 epoch 1 就触底，比 v1 的 1.9 还早。**仅记录，不据
 
 ## 10. 下一步：Phase 2 — Agent 自检重写环
 
-出口：README 多一行 `agent`，且 `hallucination_rate` 明显下降。T2.1–T2.4 已完成；下一步是 T2.5 GPU 评估。
+出口：README 多一行 `agent`，且 `hallucination_rate` 明显下降。T2.1–T2.5 已完成，出口条件的后半句未达到（见 CHANGELOG T2.5）。遗留：校验器会被反馈回显骗过，修它需要改校验并重新预注册一轮；13 条受影响样本的人工抽查。
 
 ```
 白话输入 → [检索范例] → [LoRA 生成] → [保真校验 + 风格打分] → [定向修订，最多 3 轮] → 输出 + trace

@@ -16,6 +16,7 @@ from pathlib import Path
 
 import structlog
 
+from agent.prompts import FOLLOWUP_LEAD, RESTATE_LEAD
 from eval.run_eval import evaluate, load_config, load_style_reference, output_hash
 from scripts.eval_sweep import (
     TARGETS,
@@ -108,6 +109,52 @@ def compare(
         "n": len(order),
         "optimized": optimized,
         "unoptimized": unoptimized,
+    }
+
+
+def feedback_echo(rows: Sequence[Mapping[str, object]]) -> dict[str, object]:
+    """Post hoc diagnostic, not part of SPEC 4.8: outputs that repeat the revision feedback.
+
+    The feedback quotes the missing fragment, so an output that copies the feedback
+    back contains that fragment and passes the verifier without fixing the prose. A
+    round counts as an echo when it holds a feedback lead verbatim, or a fragment of an
+    earlier round's violation inside the same quote marks the feedback uses.
+    """
+    final_ids: list[str] = []
+    second_round = 0
+    second_round_total = 0
+    revision_rounds = 0
+    revision_rounds_total = 0
+    for row in rows:
+        rounds = [_obj(item) for item in _list(row.get("rounds"))]
+        fragments: set[str] = set()
+        for index, record in enumerate(rounds):
+            if index > 0:
+                text = str(record["output"])
+                echoed = (
+                    FOLLOWUP_LEAD in text
+                    or RESTATE_LEAD in text
+                    or any(f"「{fragment}」" in text for fragment in fragments)
+                )
+                revision_rounds += int(echoed)
+                revision_rounds_total += 1
+                if index == 1:
+                    second_round += int(echoed)
+                    second_round_total += 1
+                if echoed and row.get("selected_round") == index + 1:
+                    final_ids.append(str(row["id"]))
+            for item in _list(record["violations"]):
+                violation = _obj(item)
+                fragments.update(
+                    str(violation[name]) for name in ("expected", "actual") if violation.get(name)
+                )
+    return {
+        "final_cases": len(final_ids),
+        "final_ids": final_ids,
+        "revision_rounds": revision_rounds,
+        "revision_rounds_total": revision_rounds_total,
+        "second_round": second_round,
+        "second_round_total": second_round_total,
     }
 
 
@@ -301,6 +348,27 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         for item in _list(block["fallbacks"])
     ]
     lines.extend(["", "兜底样本：" + ("；".join(fallbacks) if fallbacks else "无") + "。"])
+    lines.extend(
+        [
+            "",
+            "**事后诊断（不在 SPEC 4.8 的预注册里，看到结果之后加的）：反馈回显**",
+            "",
+            "修订反馈里用「」引用了缺失的片段。输出若把反馈原样抄回去，片段就出现在输出里，"
+            "校验器判为已修复，正文其实没改。下表数的是含反馈引导语或「片段」的输出。",
+            "",
+            "| 臂 | 最终输出改动的样本 | 其中最终输出含反馈回显 | 修订轮含回显 | 第 2 轮含回显 |",
+            "|---|---|---|---|---|",
+        ]
+    )
+    for block in blocks:
+        echo = _obj(block["feedback_echo"])
+        picked = _obj(_obj(block["rounds"])["selected_round"])
+        revised = sum(_count(picked.get(key, 0)) for key in ("2", "3"))
+        lines.append(
+            f"| {block['name']} | {revised} | {echo['final_cases']} "
+            f"| {echo['revision_rounds']} / {echo['revision_rounds_total']} "
+            f"| {echo['second_round']} / {echo['second_round_total']} |"
+        )
     lines.extend(["", "**探索臂（各自对第一轮所取的文件，未做多重比较校正）**", ""])
     lines.extend(["| 臂 | 基线 | 指标 | 均值差 | 95% 区间 | 结论 |", "|---|---|---|---|---|---|"])
     for key, value in _obj(summary["exploratory"]).items():
@@ -385,6 +453,7 @@ def _arm_block(
             for row in rows
             if row["termination"] == "fallback"
         ],
+        "feedback_echo": feedback_echo(rows),
         "feedback_format": arm.feedback_format,
         "first_round_violation_cases": first_round_violation_cases(rows),
         "name": arm.key,
@@ -491,6 +560,12 @@ def _list(value: object) -> list[object]:
     if not isinstance(value, list):
         raise SystemExit("汇总结构损坏：不是列表")
     return list(value)
+
+
+def _count(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise SystemExit("汇总结构损坏：不是整数")
+    return value
 
 
 def _number(value: object) -> float:

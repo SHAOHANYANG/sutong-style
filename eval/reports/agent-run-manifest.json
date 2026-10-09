@@ -1,0 +1,243 @@
+{
+  "adapter": "adapters/sutong-v2/adapter",
+  "arms": {
+    "agent-balanced-k2-followup": {
+      "baseline": "retrieval-balanced-k2",
+      "cache_hits": 59,
+      "exemplar_source": "balanced-k2",
+      "fallbacks": [],
+      "feedback_format": "followup",
+      "first_round_violation_cases": 13,
+      "model_calls": 26,
+      "n": 59,
+      "output_sha256": "14d43628023e4809d479c2a6695d4a857f022839010d2f19853999d6659d70f7",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 1395.0,
+          "mean": 1170.2372881355932,
+          "median": 1165.0,
+          "min": 1007.0,
+          "n": 59.0,
+          "q1": 1100.0,
+          "q3": 1210.5,
+          "std": 80.98594541868148
+        },
+        "revision": {
+          "max": 1541.0,
+          "mean": 1399.1153846153845,
+          "median": 1407.0,
+          "min": 1240.0,
+          "n": 26.0,
+          "q1": 1357.0,
+          "q3": 1473.0,
+          "std": 83.12378486009558
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 51,
+          "2": 0,
+          "3": 8,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 51,
+          "fallback": 0,
+          "max_rounds": 8,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 46,
+          "2": 0,
+          "3": 13
+        }
+      },
+      "seconds": 227.5396765420001
+    },
+    "agent-balanced-k2-restate": {
+      "baseline": "retrieval-balanced-k2",
+      "cache_hits": 61,
+      "exemplar_source": "balanced-k2",
+      "fallbacks": [],
+      "feedback_format": "restate",
+      "first_round_violation_cases": 13,
+      "model_calls": 15,
+      "n": 59,
+      "output_sha256": "b6ebae1be7f98f2354b1d9507016e6cb879f2d32087396ce5c57c3781b6bd4c0",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 1395.0,
+          "mean": 1170.2372881355932,
+          "median": 1165.0,
+          "min": 1007.0,
+          "n": 59.0,
+          "q1": 1100.0,
+          "q3": 1210.5,
+          "std": 80.98594541868148
+        },
+        "revision": {
+          "max": 1298.0,
+          "mean": 1197.4,
+          "median": 1200.0,
+          "min": 1044.0,
+          "n": 15.0,
+          "q1": 1167.0,
+          "q3": 1244.5,
+          "std": 65.93107512142258
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 48,
+          "2": 10,
+          "3": 1,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 56,
+          "fallback": 0,
+          "max_rounds": 3,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 46,
+          "2": 9,
+          "3": 4
+        }
+      },
+      "seconds": 196.70010042800004
+    },
+    "agent-k0-followup": {
+      "baseline": "retrieval-k0",
+      "cache_hits": 63,
+      "exemplar_source": "k0",
+      "fallbacks": [],
+      "feedback_format": "followup",
+      "first_round_violation_cases": 18,
+      "model_calls": 30,
+      "n": 59,
+      "output_sha256": "a588a14f7ec3db61f650907ab9fccf4a799483a768b58193194fba86fa8bb586",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 430.0,
+          "mean": 278.45762711864404,
+          "median": 274.0,
+          "min": 213.0,
+          "n": 59.0,
+          "q1": 256.0,
+          "q3": 286.5,
+          "std": 38.09591909898687
+        },
+        "revision": {
+          "max": 754.0,
+          "mean": 530.0666666666667,
+          "median": 521.0,
+          "min": 399.0,
+          "n": 30.0,
+          "q1": 509.5,
+          "q3": 545.25,
+          "std": 79.38384946294526
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 54,
+          "2": 4,
+          "3": 1,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 44,
+          "fallback": 0,
+          "max_rounds": 15,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 41,
+          "2": 2,
+          "3": 16
+        }
+      },
+      "seconds": 266.82862768600023
+    },
+    "agent-k0-restate": {
+      "baseline": "retrieval-k0",
+      "cache_hits": 66,
+      "exemplar_source": "k0",
+      "fallbacks": [],
+      "feedback_format": "restate",
+      "first_round_violation_cases": 18,
+      "model_calls": 19,
+      "n": 59,
+      "output_sha256": "8570b0b70f1a589ba59fc0b816f15df25a93d349c68fa3a4f63d96adeaa813da",
+      "prompt_tokens": {
+        "first_round": {
+          "max": 430.0,
+          "mean": 278.45762711864404,
+          "median": 274.0,
+          "min": 213.0,
+          "n": 59.0,
+          "q1": 256.0,
+          "q3": 286.5,
+          "std": 38.09591909898687
+        },
+        "revision": {
+          "max": 446.0,
+          "mean": 318.4736842105263,
+          "median": 309.0,
+          "min": 250.0,
+          "n": 19.0,
+          "q1": 300.0,
+          "q3": 325.0,
+          "std": 40.1593777749195
+        }
+      },
+      "rounds": {
+        "selected_round": {
+          "1": 47,
+          "2": 12,
+          "3": 0,
+          "none": 0
+        },
+        "termination": {
+          "accepted": 51,
+          "fallback": 0,
+          "max_rounds": 8,
+          "recursion_limit": 0
+        },
+        "total_rounds": {
+          "1": 41,
+          "2": 10,
+          "3": 8
+        }
+      },
+      "seconds": 207.69794030100013
+    }
+  },
+  "baselines": {
+    "retrieval-balanced-k2": {
+      "path": "corpus/generations/retrieval-balanced-k2.jsonl",
+      "sha256": "72c18b989f06b0cd46be7d40edbbe46654589be8a3f218c06a2ba7593d0c5dee"
+    },
+    "retrieval-k0": {
+      "path": "corpus/generations/retrieval-k0.jsonl",
+      "sha256": "1e5db348c11a99f52d01fd8e8203f8a1db24187a6781e4748780459d95a1053f"
+    }
+  },
+  "commit": "eab19fd3cd0580c2fc62c5f2fecf2abe87ddc188",
+  "decoding": "greedy",
+  "max_generations": 3,
+  "max_new_tokens": 768,
+  "max_seq_length": 4096,
+  "model": "sutong-v2",
+  "plan_sha256": "99a1f740141602bd0e186865c75b73bf63ee0de00c1a4ec66735d729b66465ec",
+  "primary_arm": "agent-balanced-k2-followup",
+  "re_retrieve_score_threshold": null,
+  "scorer": {
+    "alpha": 10.0,
+    "kind": "predictor_b",
+    "n_train": 743
+  },
+  "seed": 42,
+  "timestamp": "2026-10-08T01:48:29Z"
+}
