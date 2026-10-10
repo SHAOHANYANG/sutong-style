@@ -35,6 +35,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pairs", type=Path, default=Path("corpus/pairs.jsonl"))
     parser.add_argument("--split", default="eval")
     parser.add_argument("--adapter", type=Path, default=None, help="不给就是无微调基座")
+    parser.add_argument(
+        "--base-model",
+        default=BASE_MODEL,
+        help="只在不给 --adapter 时使用；adapter 自带它的基座",
+    )
     parser.add_argument("--pipeline", default="baseline")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--seed", type=int, default=42)
@@ -45,9 +50,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def model_name(adapter: Path | None) -> str:
+def model_name(adapter: Path | None, base_model: str = BASE_MODEL) -> str:
     """What goes into the generation row's model field."""
-    return adapter.parent.name if adapter is not None else "base"
+    if adapter is not None:
+        return adapter.parent.name
+    # The 3B base keeps its old label so existing files stay comparable.
+    return "base" if base_model == BASE_MODEL else "base:" + base_model
 
 
 def greedy_decode(
@@ -89,14 +97,19 @@ def generate_one(
     return greedy_decode(model, tokenizer, build_messages(vernacular, None), max_new_tokens)
 
 
-def load_inference_model(adapter: Path | None, max_seq_length: int, seed: int) -> tuple[Any, Any]:
+def load_inference_model(
+    adapter: Path | None,
+    max_seq_length: int,
+    seed: int,
+    base_model: str = BASE_MODEL,
+) -> tuple[Any, Any]:
     """Load the base or a LoRA adapter once. Imports stay inside the call."""
     import torch
     from unsloth import FastLanguageModel
 
     torch.manual_seed(seed)
     model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=str(adapter) if adapter is not None else BASE_MODEL,
+        model_name=str(adapter) if adapter is not None else base_model,
         max_seq_length=max_seq_length,
         dtype=None,
         load_in_4bit=True,
@@ -124,7 +137,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise ValueError(f"{args.pairs} 里没有 split == {args.split!r} 的样本")
 
     output = args.output or Path("corpus/generations") / f"{args.run_id}.jsonl"
-    name = model_name(args.adapter)
+    name = model_name(args.adapter, args.base_model)
     LOGGER.info(
         "generate_start",
         run_id=args.run_id,
@@ -136,7 +149,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         decoding="greedy",
     )
 
-    model, tokenizer = load_inference_model(args.adapter, args.max_seq_length, args.seed)
+    model, tokenizer = load_inference_model(
+        args.adapter, args.max_seq_length, args.seed, args.base_model
+    )
 
     rows: list[dict[str, object]] = []
     for index, case in enumerate(cases, start=1):

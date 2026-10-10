@@ -32,6 +32,14 @@ LOGGER = structlog.get_logger()
 
 BASE_MODEL = "Qwen/Qwen2.5-3B-Instruct"
 EXPECTED_TRAINABLE = 29_933_568
+# r = 16 on the seven modules below. Per layer that is
+# 16 * (2 * 2h + 2 * (h + kv) + 3 * (h + m)), with kv = key/value heads * head size.
+# A count that does not match means the LoRA config or the base differs from the plan.
+EXPECTED_TRAINABLE_BY_MODEL = {
+    BASE_MODEL: EXPECTED_TRAINABLE,
+    "Qwen/Qwen2.5-7B-Instruct": 40_370_176,
+    "Qwen/Qwen2.5-14B-Instruct": 68_812_800,
+}
 TARGET_MODULES = (
     "q_proj",
     "k_proj",
@@ -145,9 +153,15 @@ def assert_trainable(model: Any, expected: int) -> int:
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="LoRA 微调 Qwen2.5-3B 到苏童文风")
+    parser = argparse.ArgumentParser(description="LoRA 微调 Qwen2.5 到苏童文风")
     parser.add_argument("--pairs", type=Path, default=Path("corpus/pairs.jsonl"))
     parser.add_argument("--run-id", default="sutong-v2")
+    parser.add_argument(
+        "--base-model",
+        default=None,
+        choices=sorted(EXPECTED_TRAINABLE_BY_MODEL),
+        help="默认 3B。换基座时其余超参不变（SPEC 4.10）",
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("adapters"))
     parser.add_argument("--epochs", type=int, default=None, help="覆盖默认 2，一般不要动")
     parser.add_argument("--max-seq-length", type=int, default=None)
@@ -168,6 +182,9 @@ def resolve_config(args: argparse.Namespace) -> TrainConfig:
         overrides["max_seq_length"] = args.max_seq_length
     if args.seed is not None:
         overrides["seed"] = args.seed
+    if args.base_model is not None:
+        overrides["base_model"] = args.base_model
+        overrides["expected_trainable"] = EXPECTED_TRAINABLE_BY_MODEL[args.base_model]
     return TrainConfig(**overrides)
 
 

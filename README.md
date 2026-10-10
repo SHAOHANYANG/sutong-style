@@ -188,6 +188,7 @@ uv run python -m scripts.check_corpus_leak --history
 | [docs/RESULTS.md](docs/RESULTS.md) | 完整指标表与逐项解读 |
 | [docs/REPRODUCE.md](docs/REPRODUCE.md) | 环境搭建与各阶段的完整复现命令 |
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | 已知局限的完整列表 |
+| [docs/AUTODL.md](docs/AUTODL.md) | 在租用的 GPU 上训练更大的基座并取回结果的步骤 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 各阶段的实现记录、指标变化与问题 |
 | [docs/PLAN.md](docs/PLAN.md) | 任务划分与验收标准 |
 
