@@ -17,7 +17,7 @@
 
 ## 2. 做到哪了
 
-Phase 0 全部完成。Phase 1（检索）全部完成，出口条件（README 指标表追加 retrieval 行）已满足；主配置相对 k = 0 **未检出差异**（SPEC §4.7）。`human_eval.jsonl` 正文尚未写入，PLAN T1.6 要求的检索召回评估仍欠。Phase 2 四个代码任务与 T2.5 GPU 评估已完成：主臂 `numeral_recall` 0.892 → 0.920（改善，SPEC §4.8），PLAN 出口条件「`hallucination_rate` 明显下降」**未达到**；restate 臂的数字因反馈回显不可引用。第二轮（SPEC §4.9：回显防护 + system 反馈格式）主臂相对检索行**未检出差异**，六个臂的最终输出不再含回显。两轮合起来：这个环在 59 条上没有可靠地改善保真。人工抽查 pending。
+Phase 0 全部完成。Phase 1（检索）全部完成，出口条件（README 指标表追加 retrieval 行）已满足；主配置相对 k = 0 **未检出差异**（SPEC §4.7）。`human_eval.jsonl` 正文尚未写入，PLAN T1.6 要求的检索召回评估仍欠。Phase 2 四个代码任务与 T2.5 GPU 评估已完成：主臂 `numeral_recall` 0.892 → 0.920（改善，SPEC §4.8），PLAN 出口条件「`hallucination_rate` 明显下降」**未达到**；restate 臂的数字因反馈回显不可引用。第二轮（SPEC §4.9：回显防护 + system 反馈格式）主臂相对检索行**未检出差异**，六个臂的最终输出不再含回显。两轮合起来：这个环在 59 条上没有可靠地改善保真。人工抽查 pending。基座规模对比（SPEC §4.10）：把基座换成 Qwen2.5-14B、其余不变，微调后的判定指标相对 3B **未检出差异**；探针集上两者对训练分布之外的输入都改动很少。
 
 ### 提交历史
 

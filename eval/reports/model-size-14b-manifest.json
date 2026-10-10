@@ -1,0 +1,245 @@
+{
+  "base_model": "Qwen/Qwen2.5-14B-Instruct",
+  "commit": "37cb6c7f742e38a0a4cd6ac6bb4537b72c712a26",
+  "files": {
+    "base-14b-eval59": {
+      "path": "corpus/generations/base-14b-eval59.jsonl",
+      "sha256": "0a970d3f8c8edd4ec64840950ce78d7bab52180a11a659d1a2fd1917b5aeacdf"
+    },
+    "base-14b-probe": {
+      "path": "corpus/generations/base-14b-probe.jsonl",
+      "sha256": "01295f098518f1e998354a3b650d02d28f5afac2906a623674c1deba0e92510a"
+    },
+    "lora-14b-eval59": {
+      "path": "corpus/generations/lora-14b-eval59.jsonl",
+      "sha256": "069f937aef862467664ce23c3abe105bbea01fe9148a26fdf1ca0e9c7c25f63b"
+    },
+    "lora-14b-probe": {
+      "path": "corpus/generations/lora-14b-probe.jsonl",
+      "sha256": "8f91cb8d0e4d9736b06ccde0d62027c64bf8c24adb617919a806c57a816eb2ab"
+    },
+    "train": {
+      "path": "adapters/sutong-v2-14b/loss_curve.json",
+      "sha256": "8b7693cdc48306c4f824c41843fcd98d4670b9fce3b34cf9b9dd784574b6be4f"
+    }
+  },
+  "gpu": "NVIDIA GeForce RTX 5090, 32607 MiB",
+  "loss_curve": {
+    "config": {
+      "base_model": "Qwen/Qwen2.5-14B-Instruct",
+      "epochs": 2,
+      "expected_trainable": 68812800,
+      "gradient_accumulation_steps": 2,
+      "learning_rate": 0.0002,
+      "load_in_4bit": true,
+      "lora_alpha": 16,
+      "lora_dropout": 0.0,
+      "lora_r": 16,
+      "lr_scheduler": "cosine",
+      "max_seq_length": 1536,
+      "per_device_batch_size": 2,
+      "seed": 42,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ],
+      "warmup_ratio": 0.03
+    },
+    "eval_rows": 59,
+    "history": [
+      {
+        "epoch": 0.053763440860215055,
+        "loss": 1.2018213272094727
+      },
+      {
+        "epoch": 0.10752688172043011,
+        "loss": 1.0454811096191405
+      },
+      {
+        "epoch": 0.16129032258064516,
+        "loss": 0.9904705047607422
+      },
+      {
+        "epoch": 0.21505376344086022,
+        "loss": 0.9039717674255371
+      },
+      {
+        "epoch": 0.26881720430107525,
+        "loss": 0.9787942886352539
+      },
+      {
+        "epoch": 0.3225806451612903,
+        "loss": 0.9177646636962891
+      },
+      {
+        "epoch": 0.3763440860215054,
+        "loss": 0.8285320281982422
+      },
+      {
+        "epoch": 0.43010752688172044,
+        "loss": 0.9614520072937012
+      },
+      {
+        "epoch": 0.4838709677419355,
+        "loss": 0.9427266120910645
+      },
+      {
+        "epoch": 0.5376344086021505,
+        "loss": 0.8377840995788575
+      },
+      {
+        "epoch": 0.5913978494623656,
+        "loss": 0.8367709159851074
+      },
+      {
+        "epoch": 0.6451612903225806,
+        "loss": 0.8812728881835937
+      },
+      {
+        "epoch": 0.6989247311827957,
+        "loss": 0.8689863204956054
+      },
+      {
+        "epoch": 0.7526881720430108,
+        "loss": 0.8547492027282715
+      },
+      {
+        "epoch": 0.8064516129032258,
+        "loss": 0.836292839050293
+      },
+      {
+        "epoch": 0.8602150537634409,
+        "loss": 0.9201013565063476
+      },
+      {
+        "epoch": 0.9139784946236559,
+        "loss": 0.8604775428771972
+      },
+      {
+        "epoch": 0.967741935483871,
+        "loss": 0.8371859550476074
+      },
+      {
+        "epoch": 1.0,
+        "eval_loss": 0.8470232486724854
+      },
+      {
+        "epoch": 1.021505376344086,
+        "loss": 0.7782178401947022
+      },
+      {
+        "epoch": 1.075268817204301,
+        "loss": 0.692572021484375
+      },
+      {
+        "epoch": 1.129032258064516,
+        "loss": 0.6246631145477295
+      },
+      {
+        "epoch": 1.1827956989247312,
+        "loss": 0.6472399234771729
+      },
+      {
+        "epoch": 1.2365591397849462,
+        "loss": 0.6405184268951416
+      },
+      {
+        "epoch": 1.2903225806451613,
+        "loss": 0.6120742321014404
+      },
+      {
+        "epoch": 1.3440860215053765,
+        "loss": 0.6742219924926758
+      },
+      {
+        "epoch": 1.3978494623655915,
+        "loss": 0.6466490745544433
+      },
+      {
+        "epoch": 1.4516129032258065,
+        "loss": 0.639353895187378
+      },
+      {
+        "epoch": 1.5053763440860215,
+        "loss": 0.5940505981445312
+      },
+      {
+        "epoch": 1.5591397849462365,
+        "loss": 0.6122117519378663
+      },
+      {
+        "epoch": 1.6129032258064515,
+        "loss": 0.6697953701019287
+      },
+      {
+        "epoch": 1.6666666666666665,
+        "loss": 0.6256058216094971
+      },
+      {
+        "epoch": 1.7204301075268817,
+        "loss": 0.6376586437225342
+      },
+      {
+        "epoch": 1.7741935483870968,
+        "loss": 0.6031466007232666
+      },
+      {
+        "epoch": 1.827956989247312,
+        "loss": 0.5481820583343506
+      },
+      {
+        "epoch": 1.881720430107527,
+        "loss": 0.639353609085083
+      },
+      {
+        "epoch": 1.935483870967742,
+        "loss": 0.6347295761108398
+      },
+      {
+        "epoch": 1.989247311827957,
+        "loss": 0.6242185115814209
+      },
+      {
+        "epoch": 2.0,
+        "eval_loss": 0.8834206461906433
+      },
+      {
+        "epoch": 2.0
+      }
+    ],
+    "metrics": {
+      "epoch": 2.0,
+      "total_flos": 6.024351409465344e+16,
+      "train_loss": 0.773428863415154,
+      "train_runtime": 433.4982,
+      "train_samples_per_second": 3.428,
+      "train_steps_per_second": 0.858
+    },
+    "run_id": "sutong-v2-14b",
+    "train_rows": 743,
+    "trainable": 68812800,
+    "v1_eval_loss": "2.169 → 2.056 (epoch 1.9 触底) → 2.089"
+  },
+  "packages": {
+    "bitsandbytes": "0.50.2",
+    "peft": "0.21.2",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.5.0",
+    "trl": "0.24.0",
+    "unsloth": "2026.9.14"
+  },
+  "seconds": {
+    "base-14b-eval59": 481.8,
+    "base-14b-probe": 73.5,
+    "lora-14b-eval59": 533.2,
+    "lora-14b-probe": 66.3,
+    "train": 498.7
+  },
+  "tag": "14b",
+  "timestamp": "2026-10-10T21:36:48Z"
+}
